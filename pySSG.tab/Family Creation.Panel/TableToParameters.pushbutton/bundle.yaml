@@ -1,0 +1,14 @@
+# bundle title
+title: "CSV to\n Formulas"
+
+# bundle tooltip
+tooltip: Use a csv to automate the creation of pricing, weight, or product code formulas
+
+# bundle help url
+help_url: "https://www.youtube.com/watch?v=H7b8hjHbauE&t=8s&list=PLc_1PNcpnV57FWI6G8Cd09umHpSOzvamf"
+
+# bundle author
+author: Kyle Bruxvoort
+
+# highlight as new
+highlight: new

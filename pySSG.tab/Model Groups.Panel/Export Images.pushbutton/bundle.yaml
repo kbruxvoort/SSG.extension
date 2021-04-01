@@ -1,0 +1,8 @@
+# bundle title
+title: "Export\nGroup Images"
+
+# bundle tooltip
+tooltip: This script exports images for each group in the active view. The groups are exported as a png.
+
+# bundle author
+author: Kyle Bruxvoort

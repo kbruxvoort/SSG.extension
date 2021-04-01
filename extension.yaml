@@ -1,0 +1,13 @@
+# UI Extensions
+type: extension
+rocket_mode_compatible: true
+
+name: pySSG
+description: IronPython Scripts for Autodesk Revit
+author: Kyle Bruxvoort
+author_profile: https://kbrux.com
+website: https://fetchbim.com
+image: https://www.notion.so/image/https%3A%2F%2Fs3-us-west-2.amazonaws.com%2Fsecure.notion-static.com%2F020f207a-7050-49c3-9bff-575f16a3d0cf%2FLogo.png?table=block&id=52fa0486-300d-4e45-b549-d2ac1e26cf6b&width=250&userId=02f98bac-fa12-4775-856d-8912fab3ded3&cache=v2
+templates:
+  youtube: https://www.youtube.com/watch?v=
+  author: Kyle Bruxvoort

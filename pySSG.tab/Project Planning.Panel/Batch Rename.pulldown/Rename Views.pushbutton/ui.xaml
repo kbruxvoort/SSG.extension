@@ -1,0 +1,16 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Batch Rename"
+        Width="350" ResizeMode="NoResize" SizeToContent="Height">
+    <StackPanel Margin="10">
+        <Label Content="Find:" Margin="0,0,0,0" />
+        <TextBox x:Name="textbox" Height="24" FontSize="14" VerticalContentAlignment="Center" Padding="10,0,0,0"/>
+        <Label Content="Replace:" Margin="0,4,0,0" />
+        <TextBox x:Name="textbox2" Height="24" FontSize="14" VerticalContentAlignment="Center" Padding="10,0,10,0" Margin="0,0,0,24"/>
+        <CheckBox Content="Use RegEx" x:Name="regexToggle" Margin="0,0,0,16" IsChecked="True" />
+        <CheckBox Content="Ignore Case" x:Name="caseToggle" Margin="0,0,0,16" IsChecked="True" />
+        
+        <Button Content="Rename Elements" Height="32" Margin="0,10,0,0" Click="rename_elements" />
+        
+    </StackPanel>
+</Window>
