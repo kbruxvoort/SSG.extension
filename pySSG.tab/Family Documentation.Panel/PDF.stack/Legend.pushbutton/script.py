@@ -19,6 +19,8 @@ from rpw.ui.forms import (
     Alert,
 )
 
+from Autodesk.Revit import Exceptions
+
 
 def list_to_dict(e_list, attr="Name"):
     ele_list, properties = [], []
@@ -237,8 +239,14 @@ if form.show():
                     ele1.ViewTemplateId = view_temp.Id
                     try:
                         ele1.ViewName = ele.Symbol.FamilyName + "-" + str(count)
-                    except:
-                        print("WHOOPSIE")
+                    except Exceptions.ArgumentException:
+                        log.warning(
+                            "Failed to rename. "
+                            + ele.Symbol.FamilyName
+                            + "-"
+                            + str(count)
+                            + "already exists."
+                        )
                     revit.doc.Regenerate()
 
                     # Adjust cropbox to fit around just the element
