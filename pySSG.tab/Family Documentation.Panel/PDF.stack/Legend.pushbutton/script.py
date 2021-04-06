@@ -211,7 +211,6 @@ if form.show():
             order = []
             descrips = []
             for group in fam_groups:
-                print(group)
                 count = 1
                 group_count = len(group)
                 for ele in group:
@@ -238,7 +237,8 @@ if form.show():
                     ele1.ViewTemplateId = view_temp.Id
                     try:
                         ele1.ViewName = ele.Symbol.FamilyName + "-" + str(count)
-                    except 
+                    except:
+                        print("WHOOPSIE")
                     revit.doc.Regenerate()
 
                     # Adjust cropbox to fit around just the element
