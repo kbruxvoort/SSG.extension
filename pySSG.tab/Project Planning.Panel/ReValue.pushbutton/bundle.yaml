@@ -1,5 +1,5 @@
 help_url: '{{docpath}}-JDgiP3gK9Y'
-tooltip: Reformat parameter string values (Super handy for renaming elements)
+tooltip: This tool requires you to select the object you want to rename. Reformat parameter string values (Super handy for renaming elements)
 context: selection
 author: eirannejad
 title: Rename
