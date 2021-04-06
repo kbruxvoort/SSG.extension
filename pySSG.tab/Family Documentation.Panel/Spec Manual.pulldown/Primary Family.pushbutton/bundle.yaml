@@ -1,0 +1,15 @@
+# bundle title
+title: Primary Spec PDF
+
+# bundle tooltip
+tooltip: This script populates a spec guide PDF with parameters from a selected family. Your active view must be a 3D View.
+
+# bundle help url
+help_url: "https://www.notion.so/fetchbim/pySSG-dfb3f2c476e142f394d2bc1422162b2c"
+
+# bundle author
+author: Kyle Bruxvoort
+
+context:
+  - doc-project
+  - active-3d-view

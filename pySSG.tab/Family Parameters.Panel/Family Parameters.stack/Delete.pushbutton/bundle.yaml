@@ -1,0 +1,13 @@
+# bundle title
+title: Delete Parameters
+
+# bundle tooltip
+tooltip: This script removes all custom parameters that have not been used in dimensions as labels and also resets the value for the other parameters to zero or null.
+
+# bundle help url
+help_url: "https://www.notion.so/fetchbim/pySSG-dfb3f2c476e142f394d2bc1422162b2c"
+
+# bundle author
+author: Kyle Bruxvoort
+
+context: doc-family

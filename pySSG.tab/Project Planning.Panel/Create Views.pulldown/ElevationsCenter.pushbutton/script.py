@@ -1,7 +1,3 @@
-"""
-This script creates interior elevations in the center of a room. Elevations are renamed by room and general direction.
-"""
-
 #pylint: disable=import-error,invalid-name,broad-except
 import clr
 import math
@@ -15,10 +11,8 @@ from pyrevit import revit
 from pyrevit import script
 from pyrevit import forms
 
-__title__ = " Interior Elevations by Room Center"
-__author__ = "{{author}}"
 
-forms.check_viewtype(revit.doc.ActiveView, ViewType.FloorPlan, exitscript=True)
+# forms.check_viewtype(revit.doc.ActiveView, ViewType.FloorPlan, exitscript=True)
 
 logger = script.get_logger()
 output = script.get_output()

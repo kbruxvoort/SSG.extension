@@ -1,9 +1,6 @@
-"""
-This script creates individual floor plans for each room in the active view. The active view must be a floor plan.
-"""
-
-#pylint: disable=import-error,invalid-name,broad-except
+# pylint: disable=import-error,invalid-name,broad-except
 import clr
+
 # Import RevitAPI
 clr.AddReference("RevitAPI")
 import Autodesk
@@ -11,21 +8,22 @@ from Autodesk.Revit.DB import *
 
 from pyrevit import revit
 from pyrevit import script
-from pyrevit import forms	
+from pyrevit import forms
 
-__title__ = " Room Floor Plans by Active Plan View"
-__author__ = "{{author}}"
 
 logger = script.get_logger()
 output = script.get_output()
 
-plan = revit.doc.ActiveView 
+plan = revit.doc.ActiveView
 
-forms.check_viewtype(plan, ViewType.FloorPlan, exitscript=True)
+# forms.check_viewtype(plan, ViewType.FloorPlan, exitscript=True)
 
-room_tags = FilteredElementCollector(revit.doc, revit.doc.ActiveView.Id).OfCategory(
-            BuiltInCategory.OST_RoomTags).WhereElementIsNotElementType().\
-            ToElements()
+room_tags = (
+    FilteredElementCollector(revit.doc, revit.doc.ActiveView.Id)
+    .OfCategory(BuiltInCategory.OST_RoomTags)
+    .WhereElementIsNotElementType()
+    .ToElements()
+)
 if room_tags:
     room_tag = room_tags[0]
 
@@ -37,7 +35,9 @@ for view in col2:
 
 
 filter = Architecture.RoomFilter()
-collector = FilteredElementCollector(revit.doc, plan.Id).WherePasses(filter).ToElements()
+collector = (
+    FilteredElementCollector(revit.doc, plan.Id).WherePasses(filter).ToElements()
+)
 
 total_work = len(collector)
 for idx, room in enumerate(collector):
@@ -48,12 +48,12 @@ for idx, room in enumerate(collector):
     # Get View Family Type of Plan
     viewTypeId = plan.GetTypeId()
     level = room.LevelId
-    with revit.Transaction("Create Plans by Room"):    
+    with revit.Transaction("Create Plans by Room"):
         if newName not in views:
             # Create View
             roomView = ViewPlan.Create(revit.doc, viewTypeId, level)
 
-            # Get Room Bounding Box and Create New 
+            # Get Room Bounding Box and Create New
             roomBB = room.get_BoundingBox(plan)
             rMax = roomBB.Max
             rMin = roomBB.Min
@@ -67,7 +67,9 @@ for idx, room in enumerate(collector):
             roomView.CropBoxActive = True
             roomView.CropBoxVisible = False
             roomView.CropBox = newBB
-            aCrop = roomView.get_Parameter(BuiltInParameter.VIEWER_ANNOTATION_CROP_ACTIVE)
+            aCrop = roomView.get_Parameter(
+                BuiltInParameter.VIEWER_ANNOTATION_CROP_ACTIVE
+            )
             aCrop.Set(True)
 
             # Name the New View
@@ -78,7 +80,7 @@ for idx, room in enumerate(collector):
         else:
             message = 'View "%s" already exists' % newName
             logger.warning(message)
-        
+
         try:
             # Find Center of Room and Move it
             roomId = LinkElementId(room.Id)

@@ -1,0 +1,5 @@
+tooltip: Deletes all unused elevations. Any interior elevation that does not contain SSG families is considered unused. The container is based on the crop region and crop offset.
+title: Delete Unused Elevations
+author: Kyle Bruxvoort
+context:
+  - doc-project

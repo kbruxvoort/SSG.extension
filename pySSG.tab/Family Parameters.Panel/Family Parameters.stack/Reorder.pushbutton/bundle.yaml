@@ -1,0 +1,13 @@
+# bundle title
+title: Reorder Parameters
+
+# bundle tooltip
+tooltip: This script is the initial test for creating a faster way to reorder parameters. Currently it just sorts them by length of parameter name. (Largest to Smallest)
+
+# bundle help url
+help_url: "https://www.notion.so/fetchbim/pySSG-dfb3f2c476e142f394d2bc1422162b2c"
+
+# bundle author
+author: Kyle Bruxvoort
+
+context: doc-family

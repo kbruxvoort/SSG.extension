@@ -1,0 +1,14 @@
+# bundle title
+title: Reset Reference Planes
+
+# bundle tooltip
+tooltip: This script resets Reference Planes to their standard color and style.
+
+# bundle help url
+help_url: "https://www.notion.so/fetchbim/pySSG-dfb3f2c476e142f394d2bc1422162b2c"
+
+# bundle author
+author: Kyle Bruxvoort
+
+context:
+  - doc-family

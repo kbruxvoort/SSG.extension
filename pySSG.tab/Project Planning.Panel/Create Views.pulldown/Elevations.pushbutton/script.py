@@ -1,10 +1,7 @@
-"""
-This script creates interior elevations each room based on room boundary. Elevations are renamed by room and general direction. If there are are multiple elevations facing the same direction in a room the viewName will fail to rename.
-"""
-
-#pylint: disable=import-error,invalid-name,broad-except
+# pylint: disable=import-error,invalid-name,broad-except
 import clr
 import math
+
 # Import RevitAPI
 clr.AddReference("RevitAPI")
 import Autodesk
@@ -15,13 +12,12 @@ from pyrevit import revit
 from pyrevit import script
 from pyrevit import forms
 
-__title__ = " Interior Elevations by Room Boundary"
-__author__ = "{{author}}"
 
-forms.check_viewtype(revit.doc.ActiveView, ViewType.FloorPlan, exitscript=True)
+# forms.check_viewtype(revit.doc.ActiveView, ViewType.FloorPlan, exitscript=True)
 
 logger = script.get_logger()
 output = script.get_output()
+
 
 class RoomOption(forms.TemplateListItem):
     # def __init__(self, room_element):
@@ -30,7 +26,8 @@ class RoomOption(forms.TemplateListItem):
     @property
     def name(self):
         """Room name."""
-        return '%s' % revit.query.get_name(self.item)
+        return "%s" % revit.query.get_name(self.item)
+
 
 def checkCurves(curve1, curve2):
     v1 = curve1.Direction.Normalize()
@@ -41,12 +38,18 @@ def checkCurves(curve1, curve2):
     else:
         return curve1
 
+
 def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
-    return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+    return abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+
 
 rooms, elems, names = [], [], []
 
-col1 = FilteredElementCollector(revit.doc).OfCategory(BuiltInCategory.OST_Rooms).ToElements()
+col1 = (
+    FilteredElementCollector(revit.doc)
+    .OfCategory(BuiltInCategory.OST_Rooms)
+    .ToElements()
+)
 
 col2 = FilteredElementCollector(revit.doc).OfClass(ViewFamilyType).ToElements()
 
@@ -63,11 +66,11 @@ for room in col1:
 
 
 res = forms.SelectFromList.show(
-                                sorted([RoomOption(x) for x in rooms],
-                                       key=lambda x: x.Number),
-                                multiselect=True,
-                                # name_attr= 'Number',
-                                button_name='Select Rooms')
+    sorted([RoomOption(x) for x in rooms], key=lambda x: x.Number),
+    multiselect=True,
+    # name_attr= 'Number',
+    button_name="Select Rooms",
+)
 
 
 heights = []
@@ -79,10 +82,10 @@ if res:
     for r in res:
         heights.append(r.UnboundedHeight)
         boundSegs = r.GetBoundarySegments(bOptions)
-        
+
         for bounds in boundSegs:
             curveLists.append(bounds)
-            
+
 out_list = []
 for cList in curveLists:
     count = 0
@@ -93,15 +96,21 @@ for cList in curveLists:
         if count == 0:
             newCurves.append(curve)
         else:
-            newCurve = checkCurves(curve, newCurves[len(newCurves)-1])
+            newCurve = checkCurves(curve, newCurves[len(newCurves) - 1])
             if newCurve == curve:
                 newCurves.append(curve)
             else:
-                newCurves[len(newCurves)-1] = newCurve
+                newCurves[len(newCurves) - 1] = newCurve
         count += 1
 
-    if newCurves[0].Direction.Normalize().IsAlmostEqualTo(newCurves[len(newCurves)-1].Direction.Normalize()):
-        newCurve = Line.ByStartPointEndPoint(newCurves[len(newCurves)-1].StartPoint, newCurves[0].EndPoint)
+    if (
+        newCurves[0]
+        .Direction.Normalize()
+        .IsAlmostEqualTo(newCurves[len(newCurves) - 1].Direction.Normalize())
+    ):
+        newCurve = Line.ByStartPointEndPoint(
+            newCurves[len(newCurves) - 1].StartPoint, newCurves[0].EndPoint
+        )
         newCurves.pop()
         newCurves[0] = newCurve
 
@@ -116,14 +125,13 @@ for out in out_list:
 
         rev_dir = rev.Direction
 
-        zAxis = XYZ(0,0,1)
+        zAxis = XYZ(0, 0, 1)
         cross = rev_dir.CrossProduct(zAxis)
 
-        newLine = n.CreateTransformed(Transform.CreateTranslation(6*cross))
+        newLine = n.CreateTransformed(Transform.CreateTranslation(6 * cross))
 
         curves.append(newLine)
         old_curves.append(n)
-
 
 
 views = []
@@ -150,64 +158,74 @@ for curve in curves:
 
     xyz5 = xyz4.Normalize()
 
-
     try:
 
-        with revit.Transaction("Create Elevations by Room"): 
-            eleMarker = ElevationMarker.CreateElevationMarker(revit.doc, viewType.Id, xyz3, 100)
+        with revit.Transaction("Create Elevations by Room"):
+            eleMarker = ElevationMarker.CreateElevationMarker(
+                revit.doc, viewType.Id, xyz3, 100
+            )
             ele1 = eleMarker.CreateElevation(revit.doc, revit.doc.ActiveView.Id, 1)
             ElementTransformUtils.RotateElement(revit.doc, eleMarker.Id, bound, num4)
             xyz6 = ele1.ViewDirection.Normalize()
             num5 = xyz5.DotProduct(xyz6)
             # print(num5)
             # print(type(num5))
-            
 
             if isclose(num5, -1.0):
-                viewSection = eleMarker.CreateElevation(revit.doc, revit.doc.ActiveView.Id, 3)
+                viewSection = eleMarker.CreateElevation(
+                    revit.doc, revit.doc.ActiveView.Id, 3
+                )
                 revit.doc.Delete(ele1.Id)
                 views.append(viewSection)
                 # print("section1")
 
             elif isclose(num5, 1.0):
                 if int(num5) == 1:
-                    ele2 = eleMarker.CreateElevation(revit.doc, revit.doc.ActiveView.Id, 2)
+                    ele2 = eleMarker.CreateElevation(
+                        revit.doc, revit.doc.ActiveView.Id, 2
+                    )
                     revit.doc.Delete(ele1.Id)
-                    viewSection = eleMarker.CreateElevation(revit.doc, revit.doc.ActiveView.Id, 1)
+                    viewSection = eleMarker.CreateElevation(
+                        revit.doc, revit.doc.ActiveView.Id, 1
+                    )
                     revit.doc.Delete(ele2.Id)
                     views.append(viewSection)
                     # print("section2")
 
             else:
-                ElementTransformUtils.RotateElement(revit.doc, eleMarker.Id, bound, -(2.0 * num4))
+                ElementTransformUtils.RotateElement(
+                    revit.doc, eleMarker.Id, bound, -(2.0 * num4)
+                )
                 ele3 = eleMarker.CreateElevation(revit.doc, revit.doc.ActiveView.Id, 2)
                 revit.doc.Delete(ele1.Id)
-                viewSection = eleMarker.CreateElevation(revit.doc, revit.doc.ActiveView.Id, 1)
+                viewSection = eleMarker.CreateElevation(
+                    revit.doc, revit.doc.ActiveView.Id, 1
+                )
                 revit.doc.Delete(ele3.Id)
                 # print("section3")
 
                 try:
                     num5 = xyz5.DotProduct(viewSection.ViewDirection.Normalize())
                     # print(num5)
-                    
+
                 except:
                     pass
 
                 if int(num5) == -1:
                     # print("-1")
                     # print("---")
-                    ele4 = eleMarker.CreateElevation(revit.doc, revit.doc.ActiveView.Id, 3)
+                    ele4 = eleMarker.CreateElevation(
+                        revit.doc, revit.doc.ActiveView.Id, 3
+                    )
                     revit.doc.Delete(viewSection.Id)
                     views.append(ele4)
                 else:
                     views.append(viewSection)
                     # print("-----")
 
-
     except:
         print("error")
-    
-    
+
 
 # print(len(views))
 total_work = len(views)
@@ -216,31 +234,33 @@ with revit.Transaction("Rename Elevation"):
         farClip = view.get_Parameter(BuiltInParameter.VIEWER_BOUND_OFFSET_FAR)
         farClip.SetValueString("6.25'")
         filt = ElementCategoryFilter(BuiltInCategory.OST_Rooms)
-        collect = FilteredElementCollector(revit.doc, view.Id).WhereElementIsNotElementType()
+        collect = FilteredElementCollector(
+            revit.doc, view.Id
+        ).WhereElementIsNotElementType()
         collect = collect.WherePasses(filt)
         room = collect.FirstElement()
 
         roomName = room.LookupParameter("Name").AsString().upper()
         roomNumber = room.LookupParameter("Number").AsString()
-        
+
         direct = view.ViewDirection
         angle = direct.AngleOnPlaneTo(XYZ.BasisX, XYZ.BasisZ)
-        degrees = round(math.degrees(angle)/45)*45
+        degrees = round(math.degrees(angle) / 45) * 45
         # print(str(math.degrees(angle)) + " > " + str(degrees))
 
-        if(degrees == 45):
+        if degrees == 45:
             direction = "NORTHWEST"
-        elif(degrees == 90):
+        elif degrees == 90:
             direction = "NORTH"
-        elif(degrees == 135):
+        elif degrees == 135:
             direction = "NORTHEAST"
-        elif(degrees == 180):
+        elif degrees == 180:
             direction = "EAST"
-        elif(degrees == 225):
+        elif degrees == 225:
             direction = "SOUTHEAST"
-        elif(degrees == 270):
+        elif degrees == 270:
             direction = "SOUTH"
-        elif(degrees == 315):
+        elif degrees == 315:
             direction = "SOUTHWEST"
         else:
             direction = "WEST"
@@ -249,7 +269,7 @@ with revit.Transaction("Rename Elevation"):
 
         newName = "ELEVATION - " + roomName + " " + roomNumber + " - " + direction
         # print(newName)
-        
+
         try:
             print('Creating Elevation "%s"' % newName)
             view.ViewName = newName
@@ -267,7 +287,7 @@ with revit.Transaction("Rename Elevation"):
 
 # for curveList, viewList, height in zip(curves, views, heights):
 # for height in heights:
-for curve, view in zip(curves,views):
+for curve, view in zip(curves, views):
     # print(view.ViewName)
     height = heights[0]
     viewCropManager = view.GetCropRegionShapeManager()
@@ -277,37 +297,32 @@ for curve, view in zip(curves,views):
     PointD = cLoopCurves[3].GetEndPoint(0)
     curveStart = curve.GetEndPoint(1)
     curveEnd = curve.GetEndPoint(0)
-    curveMP = (curveStart + curveEnd)/2
-
-    
-
+    curveMP = (curveStart + curveEnd) / 2
 
     if curveMP.DistanceTo(curve.GetEndPoint(1)) < curveMP.DistanceTo(PointA):
-        PointA = curve.GetEndPoint(1)		
-        
+        PointA = curve.GetEndPoint(1)
+
     if curveMP.DistanceTo(curve.GetEndPoint(0)) < curveMP.DistanceTo(PointD):
-        PointD = curve.GetEndPoint(0)			
+        PointD = curve.GetEndPoint(0)
 
     PointB = XYZ(PointA.X, PointA.Y, PointA.Z + height)
     PointC = XYZ(PointD.X, PointD.Y, PointD.Z + height)
 
-
-    
-    LineA = Line.CreateBound(PointA,PointB)
-    LineB = Line.CreateBound(PointB,PointC)
-    LineC = Line.CreateBound(PointC,PointD)
-    LineD = Line.CreateBound(PointD,PointA)
+    LineA = Line.CreateBound(PointA, PointB)
+    LineB = Line.CreateBound(PointB, PointC)
+    LineC = Line.CreateBound(PointC, PointD)
+    LineD = Line.CreateBound(PointD, PointA)
 
     curveLoop = CurveLoop.Create([LineA, LineB, LineC, LineD])
     # print(PointA)
     # print(PointB)
     # print(PointC)
     # print(PointD)
-    
+
     with revit.Transaction("Crop Elevations"):
-        try:		
+        try:
             viewCropManager.SetCropShape(curveLoop)
         except:
             print("Unable to modify crop region")
-    
+
 print("Completed\n")

@@ -1,0 +1,6 @@
+tooltip: This script creates interior elevations each room based on room boundary. Elevations are renamed by room and general direction. If there are are multiple elevations facing the same direction in a room the viewName will fail to rename.
+title: Interior Elevations by Room Boundary
+author: Kyle Bruxvoort
+context:
+  - doc-project
+  - active-plan-view

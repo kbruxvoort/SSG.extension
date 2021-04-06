@@ -1,19 +1,10 @@
-"""
-Deletes all unused elevations. Any interior elevation that 
-does not contain SSG families is considered unused. 
-The container is based on the crop region and crop offset.
-"""
-#pylint: disable=import-error,invalid-name,broad-except
+# pylint: disable=import-error,invalid-name,broad-except
 from Autodesk.Revit.DB import *
 
 from pyrevit import revit
 from pyrevit import script
 from pyrevit import forms
 
-__title__ = "Delete Unused Elevations"
-__author__ = "{{author}}"
-
-# forms.inform_wip()
 
 output = script.get_output()
 logger = script.get_logger()
@@ -35,10 +26,14 @@ for idx, v in enumerate(views):
         manufacturer_param_id = ElementId(BuiltInParameter.ALL_MODEL_MANUFACTURER)
         manufacturer_param_prov = ParameterValueProvider(manufacturer_param_id)
         param_begins = FilterStringBeginsWith()
-        manufacturer_value_rule = FilterStringRule(manufacturer_param_prov, param_begins, "Southwest Solutions Group", False)
+        manufacturer_value_rule = FilterStringRule(
+            manufacturer_param_prov, param_begins, "Southwest Solutions Group", False
+        )
         filt = ElementParameterFilter(manufacturer_value_rule)
         # filt = ElementCategoryFilter(BuiltInCategory.OST_Rooms)
-        collect = FilteredElementCollector(revit.doc, v.Id).WhereElementIsNotElementType()
+        collect = FilteredElementCollector(
+            revit.doc, v.Id
+        ).WhereElementIsNotElementType()
         collect = collect.WherePasses(filt)
         fam = collect.FirstElement()
         # print(fam)
@@ -54,4 +49,4 @@ for marker in markers:
         count += 1
         with revit.Transaction("Delete Unused Markers"):
             revit.doc.Delete(marker.Id)
-print('%s Unused Markers Deleted' % str(count))
+print("%s Unused Markers Deleted" % str(count))

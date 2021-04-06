@@ -1,0 +1,18 @@
+# bundle title
+title: Material to CSV
+
+# bundle tooltip
+tooltip: This script will export material data to a csv. Use this csv to batch create other materials based on the template.
+
+# bundle help url
+help_url: "https://www.notion.so/fetchbim/pySSG-dfb3f2c476e142f394d2bc1422162b2c"
+
+# bundle author
+author: Kyle Bruxvoort
+
+# minimium supported Revit version
+min_revit_version: 2018
+
+context:
+  - doc-project
+

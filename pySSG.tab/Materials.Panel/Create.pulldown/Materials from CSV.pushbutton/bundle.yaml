@@ -1,0 +1,18 @@
+# bundle title
+title: Materials from CSV
+
+# bundle tooltip
+tooltip: This script batch creates materials from an excel template. You must use Revit 2019 or newer to have access to appearance assets.
+
+# bundle help url
+help_url: "https://www.notion.so/fetchbim/pySSG-dfb3f2c476e142f394d2bc1422162b2c"
+
+# bundle author
+author: Kyle Bruxvoort
+
+# minimium supported Revit version
+min_revit_version: 2018
+
+context:
+  - doc-project
+

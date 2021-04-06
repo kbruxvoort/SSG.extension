@@ -1,0 +1,6 @@
+tooltip: This script creates interior elevations in the center of a room. Elevations are renamed by room and general direction.
+title: Interior Elevations by Room Center
+author: Kyle Bruxvoort
+context:
+  - doc-project
+  - active-plan-view

@@ -1,14 +1,10 @@
-"""Override the line weight of the cropbox of interior elevations."""
 #pylint: disable=import-error,invalid-name,broad-except
-
 from Autodesk.Revit.DB import *
 
 from pyrevit import revit
 from pyrevit import script
 from pyrevit import forms
 
-__title__ = "Override Elevation Cropbox"
-__author__ = "{{author}}"
 
 output = script.get_output()
 logger = script.get_logger()
