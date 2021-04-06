@@ -8,8 +8,7 @@ from datetime import date
 # from pyrevit.coreutils import Timer
 # timer = Timer()
 
-from pyrevit import revit, DB
-from pyrevit import forms
+from pyrevit import revit, DB, forms, HOST_APP
 from rpw.ui.forms import (
     FlexForm,
     Label,
@@ -267,20 +266,54 @@ if form.show():
                     tag_mode = DB.TagMode.TM_ADDBY_MATERIAL
                     tag_orient = DB.TagOrientation.Horizontal
                     # tag_name = "SSG_Tag_Material_Swatch"
-                    tag_pt = loc.Add(DB.XYZ(0, -0.5, 0))
+                    # tag_pt = loc.Add(DB.XYZ(0, -0.5, 0))
+                    tag_pt = loc.Add(DB.XYZ(0, 0, 0))
+                    # print(tag.IsActive)
                     if not tag.IsActive:
                         tag.Activate()
                         revit.doc.Regnerate()
-
-                    # TODO check for why I am getting an attribute error for new tag on a document. Might need to activate tag type
-                    try:
+                    app = revit.doc.Application
+                    if int(app.VersionNumber) < 2019:
                         eleTag = revit.doc.Create.NewTag(
                             plan1, swatch, False, tag_mode, tag_orient, tag_pt
                         )
                         eleTag.ChangeTypeId(tag.Id)
-                        revit.doc.Regenerate()
-                    except AttributeError:
-                        print("Failed to Tag Swatch")
+                    else:
+                        eleTag = DB.IndependentTag.Create(
+                            revit.doc,
+                            plan1.Id,
+                            DB.Reference(swatch),
+                            False,
+                            tag_mode,
+                            tag_orient,
+                            tag_pt,
+                        )
+                        eleTag.ChangeTypeId(tag.Id)
+
+                    with revit.Transaction("Fix Tag"):
+                        DB.ElementTransformUtils.MoveElement(
+                            revit.doc, eleTag.Id, DB.XYZ(0, -0.5, 0)
+                        )
+
+                    # with revit.Transaction("Fix Tag"):
+                    #     DB.ElementTransformUtils.MoveElement(
+                    #         revit.doc, eleTag.Id, DB.XYZ(0.25, 0, 0)
+                    # TODO check for why I am getting an attribute error for new tag on a document. Might need to activate tag type
+                    # try:
+                    #     eleTag = revit.doc.Create.NewTag(
+                    #         plan1, swatch, False, tag_mode, tag_orient, tag_pt
+                    #     )
+                    #     eleTag.ChangeTypeId(tag.Id)
+                    #     # with revit.Transaction("Fix Tag"):
+                    #     #     DB.ElementTransformUtils.MoveElement(
+                    #     #         revit.doc, eleTag.Id, DB.XYZ(0.25, 0, 0)
+                    #     #     )
+                    #     #     DB.ElementTransformUtils.MoveElement(
+                    #     #         revit.doc, eleTag.Id, DB.XYZ(-0.25, 0, 0)
+                    #     #     )
+                    #     #     revit.doc.Regenerate()
+                    # except AttributeError:
+                    #     print("Failed to Tag Swatch")
 
                     views.append(plan1)
 
@@ -405,3 +438,4 @@ if form.show():
                 col += 1
                 view_count -= 1
                 i += 1
+                revit.doc.Regenerate()
