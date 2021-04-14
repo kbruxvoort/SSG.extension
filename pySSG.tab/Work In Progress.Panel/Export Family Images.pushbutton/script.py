@@ -1,6 +1,7 @@
 # pylint: disable=import-error,invalid-name,broad-except
 import clr
 
+
 clr.AddReference("System")
 clr.AddReference("System.IO")
 clr.AddReference("System.Drawing")
@@ -9,6 +10,7 @@ from System import IO
 from System.Drawing import GraphicsUnit, Graphics, Rectangle, Bitmap
 
 from pyrevit import revit, DB, UI, script, forms, HOST_APP
+from kyle_test import get_outline
 
 # from pyrevit import script
 # from pyrevit import forms
@@ -28,9 +30,12 @@ target_folder = forms.pick_folder(title="Select Image Save Location")
 if target_folder:
     viewTypeId = threeD_view.GetTypeId()
     selection = revit.get_selection()
+    # party()
+
+    """
     for s in selection:
         print(s)
-    """
+
         viewSet = []
         # Get group Bounding Box and Create New
         groupBB = group.get_BoundingBox(threeD_view)

@@ -1,13 +1,16 @@
+# from doc_utils import max_sheet_num, get_rectangle, is_float
 import math
 import itertools
 import rpw
 
+from ssgutils import max_sheet_num, get_rectangle
 from itertools import groupby
 from datetime import date
 
+
 # from pyrevit.coreutils import Timer
 # timer = Timer()
-
+from Autodesk.Revit import Exceptions
 from pyrevit import revit, DB, forms, HOST_APP
 from rpw.ui.forms import (
     FlexForm,
@@ -45,30 +48,8 @@ def list_to_dict_2(e_list):
     return dict(d1)
 
 
-def getOutlines(v, border_length_inches):
-    w = 0
-    l = 0
-    # if not v.ViewType == ViewType.Schedule:
-    # get outline
-    oLine = v.Outline
-    minU = oLine.Min.U - (border_length_inches) / 2
-    minV = oLine.Min.V - (border_length_inches) / 2
-    # minV = oLine.Min.V
-    maxU = oLine.Max.U + (border_length_inches) / 2
-    maxV = oLine.Max.V + (border_length_inches) / 2
-    # maxV = oLine.Max.V
-
-    # get width and length of Rectangle
-    w = maxU - minU
-    l = maxV - minV
-
-    # center_pt = DB.UV(w/2, l/2)
-
-    return w, l
-
-
 plan_view = revit.doc.ActiveView
-forms.check_viewtype(plan_view, DB.ViewType.FloorPlan, exitscript=True)
+# forms.check_viewtype(plan_view, DB.ViewType.FloorPlan, exitscript=True)
 today = date.today()
 today = today.strftime("%m/%d/%Y")
 
@@ -158,23 +139,25 @@ if form.show():
         # print(swatch_fam_type.FamilyName)
 
         # Filtering for current sheets to get highest sheet number
-        current_sheets = []
+
+        # current_sheets = []
         all_sheets = (
             DB.FilteredElementCollector(revit.doc)
             .OfCategory(DB.BuiltInCategory.OST_Sheets)
             .ToElements()
         )
-        for s in all_sheets:
-            try:
-                num = math.floor(float(s.SheetNumber))
-                current_sheets.append(num)
-            except ValueError:
-                continue
+        max_num = max_sheet_num(all_sheets)
+        # for s in all_sheets:
+        #     try:
+        #         num = math.floor(float(s.SheetNumber))
+        #         current_sheets.append(num)
+        #     except ValueError:
+        #         continue
 
-        if current_sheets:
-            max_num = max(current_sheets)
-        else:
-            max_num = 0
+        # if current_sheets:
+        #     max_num = max(current_sheets)
+        # else:
+        #     max_num = 0
 
         # Get default text
         default_text_id = revit.doc.GetDefaultElementTypeId(
@@ -242,36 +225,32 @@ if form.show():
                     viewTypeId = plan_view.GetTypeId()
                     plan1 = DB.ViewPlan.Create(revit.doc, viewTypeId, levelId)
 
-                    # gMax = elementBB.Max
-                    # gMin = elementBB.Min
-                    # newMaxP = DB.XYZ(gMax.X + 1/12, gMax.Y + 1/12, gMax.Z)
-                    # newMinP = DB.XYZ(gMin.X - 1/12, gMin.Y - 1/12, gMin.Z)
-                    # newBB = DB.BoundingBoxXYZ()
-                    # newBB.Max = newMaxP
-                    # newBB.Min = newMinP
-
                     # Set the new Bounding Box
                     plan1.CropBoxActive = True
                     plan1.CropBoxVisible = False
-                    # plan1.CropBox = newBB
+
                     plan1.CropBox = elementBB
                     aCrop = plan1.get_Parameter(
                         DB.BuiltInParameter.VIEWER_ANNOTATION_CROP_ACTIVE
                     )
                     aCrop.Set(True)
                     plan1.ViewTemplateId = view_temp.Id
-                    plan1.ViewName = mat.Name
+                    try:
+                        plan1.Name = mat.Name
+                        # plan1.ViewName = mat.Name
+                    except Exceptions.ArgumentException:
+                        print("Failed to name view " + mat.Name)
 
                     # Tag View
                     tag_mode = DB.TagMode.TM_ADDBY_MATERIAL
                     tag_orient = DB.TagOrientation.Horizontal
-                    # tag_name = "SSG_Tag_Material_Swatch"
-                    # tag_pt = loc.Add(DB.XYZ(0, -0.5, 0))
                     tag_pt = loc.Add(DB.XYZ(0, 0, 0))
-                    # print(tag.IsActive)
+
                     if not tag.IsActive:
                         tag.Activate()
                         revit.doc.Regnerate()
+
+                    # Material tags create method changed in 2019 API
                     app = revit.doc.Application
                     if int(app.VersionNumber) < 2019:
                         eleTag = revit.doc.Create.NewTag(
@@ -290,31 +269,6 @@ if form.show():
                         )
                         eleTag.ChangeTypeId(tag.Id)
 
-                    with revit.Transaction("Fix Tag"):
-                        DB.ElementTransformUtils.MoveElement(
-                            revit.doc, eleTag.Id, DB.XYZ(0, -0.5, 0)
-                        )
-
-                    # with revit.Transaction("Fix Tag"):
-                    #     DB.ElementTransformUtils.MoveElement(
-                    #         revit.doc, eleTag.Id, DB.XYZ(0.25, 0, 0)
-                    # TODO check for why I am getting an attribute error for new tag on a document. Might need to activate tag type
-                    # try:
-                    #     eleTag = revit.doc.Create.NewTag(
-                    #         plan1, swatch, False, tag_mode, tag_orient, tag_pt
-                    #     )
-                    #     eleTag.ChangeTypeId(tag.Id)
-                    #     # with revit.Transaction("Fix Tag"):
-                    #     #     DB.ElementTransformUtils.MoveElement(
-                    #     #         revit.doc, eleTag.Id, DB.XYZ(0.25, 0, 0)
-                    #     #     )
-                    #     #     DB.ElementTransformUtils.MoveElement(
-                    #     #         revit.doc, eleTag.Id, DB.XYZ(-0.25, 0, 0)
-                    #     #     )
-                    #     #     revit.doc.Regenerate()
-                    # except AttributeError:
-                    #     print("Failed to Tag Swatch")
-
                     views.append(plan1)
 
                     if count == len(group):
@@ -327,12 +281,13 @@ if form.show():
                     count += 1
 
         with revit.Transaction("Place views on finish sheet"):
+            # TODO make this dims dynamic
             sheet_width = 0.625
             sheet_length = 8.5 / 12
 
             widths, lengths = [], []
             for v in views:
-                w, l = getOutlines(v, border_size)
+                w, l = get_rectangle(v)
                 widths.append(w)
                 lengths.append(l)
             max_width, max_length = max(widths), max(lengths)
@@ -343,6 +298,7 @@ if form.show():
             tile_width = sheet_width / column_qty
             tile_length = sheet_length / row_qty
 
+            # TODO make start point dynamic
             first_tile_loc = DB.XYZ(0.825 / 12, 9.5 / 12, 0)
             first_tile_pt = first_tile_loc.Add(
                 DB.XYZ(tile_width / 2, -(tile_length / 2), 0)
