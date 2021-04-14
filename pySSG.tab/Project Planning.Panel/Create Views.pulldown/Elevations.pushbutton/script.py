@@ -240,7 +240,7 @@ with revit.Transaction("Rename Elevation"):
         collect = collect.WherePasses(filt)
         room = collect.FirstElement()
 
-        roomName = room.LookupParameter("Name").AsString().upper()
+        roomName = room.LookupParameter("Name").AsString()
         roomNumber = room.LookupParameter("Number").AsString()
 
         direct = view.ViewDirection
@@ -249,25 +249,25 @@ with revit.Transaction("Rename Elevation"):
         # print(str(math.degrees(angle)) + " > " + str(degrees))
 
         if degrees == 45:
-            direction = "NORTHWEST"
+            direction = "Northwest"
         elif degrees == 90:
-            direction = "NORTH"
+            direction = "North"
         elif degrees == 135:
-            direction = "NORTHEAST"
+            direction = "Northeast"
         elif degrees == 180:
-            direction = "EAST"
+            direction = "East"
         elif degrees == 225:
-            direction = "SOUTHEAST"
+            direction = "Southeast"
         elif degrees == 270:
-            direction = "SOUTH"
+            direction = "South"
         elif degrees == 315:
-            direction = "SOUTHWEST"
+            direction = "Southwest"
         else:
-            direction = "WEST"
+            direction = "West"
         # print(degrees)
         # print(direction)
 
-        newName = "ELEVATION - " + roomName + " " + roomNumber + " - " + direction
+        newName = "Elevation - " + roomName + " " + roomNumber + " - " + direction
         # print(newName)
 
         try:

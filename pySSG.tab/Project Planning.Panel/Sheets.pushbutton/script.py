@@ -109,7 +109,7 @@ if selected_titleblocks:
 with revit.Transaction("Create Sheets per Room"):
     sheet_list = []
     for idx, (room, group) in enumerate(zip(sorted(rooms), groups)):
-        roomName = room.LookupParameter("Name").AsString().upper()
+        roomName = room.LookupParameter("Name").AsString()
         roomNumber = room.LookupParameter("Number").AsString()
         startNumber = max_num + 1 + idx
         view_num = len(group)

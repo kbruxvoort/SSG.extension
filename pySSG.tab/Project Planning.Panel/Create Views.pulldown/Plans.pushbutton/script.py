@@ -41,9 +41,9 @@ collector = (
 
 total_work = len(collector)
 for idx, room in enumerate(collector):
-    roomName = room.LookupParameter("Name").AsString().upper()
+    roomName = room.LookupParameter("Name").AsString()
     roomNumber = room.LookupParameter("Number").AsString()
-    newName = "FLOOR PLAN - " + roomName + " " + roomNumber
+    newName = "Floor Plan - " + roomName + " " + roomNumber
 
     # Get View Family Type of Plan
     viewTypeId = plan.GetTypeId()

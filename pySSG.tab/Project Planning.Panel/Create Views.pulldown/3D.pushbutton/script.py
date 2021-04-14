@@ -2,8 +2,9 @@
 This script creates individual 3D views for each room in the active view. The active view must be a 3D view.
 """
 
-#pylint: disable=import-error,invalid-name,broad-except
+# pylint: disable=import-error,invalid-name,broad-except
 import clr
+
 # Import RevitAPI
 clr.AddReference("RevitAPI")
 import Autodesk
@@ -11,7 +12,7 @@ from Autodesk.Revit.DB import *
 
 from pyrevit import revit
 from pyrevit import script
-from pyrevit import forms	
+from pyrevit import forms
 
 __title__ = " 3D Room Views by Active 3D View"
 __author__ = "{{author}}"
@@ -20,12 +21,16 @@ __author__ = "{{author}}"
 logger = script.get_logger()
 output = script.get_output()
 
-threeD_view = revit.doc.ActiveView 
+threeD_view = revit.doc.ActiveView
 
 forms.check_viewtype(threeD_view, ViewType.ThreeD, exitscript=True)
 
 rooms = []
-collector = FilteredElementCollector(revit.doc).OfCategory(BuiltInCategory.OST_Rooms).ToElements()
+collector = (
+    FilteredElementCollector(revit.doc)
+    .OfCategory(BuiltInCategory.OST_Rooms)
+    .ToElements()
+)
 for c in collector:
     if c.Area != 0:
         rooms.append(c)
@@ -39,7 +44,7 @@ for view in col2:
 
 total_work = len(rooms)
 for idx, room in enumerate(rooms):
-    roomName = room.LookupParameter("Name").AsString().upper()
+    roomName = room.LookupParameter("Name").AsString()
     roomNumber = room.LookupParameter("Number").AsString()
     newName = "3D - " + roomName + " " + roomNumber
 
@@ -47,9 +52,9 @@ for idx, room in enumerate(rooms):
     viewTypeId = threeD_view.GetTypeId()
     level = room.LevelId
 
-    with revit.Transaction("Create 3D Views by Room"):    
+    with revit.Transaction("Create 3D Views by Room"):
         if newName not in views:
-            # Get Room Bounding Box and Create New 
+            # Get Room Bounding Box and Create New
             roomBB = room.get_BoundingBox(threeD_view)
             rMax = roomBB.Max
             rMin = roomBB.Min
@@ -58,7 +63,6 @@ for idx, room in enumerate(rooms):
             newBB = BoundingBoxXYZ()
             newBB.Max = newMaxP
             newBB.Min = newMinP
-
 
             threeD = View3D.CreateIsometric(revit.doc, viewTypeId)
             # box = app.Create.NewBoundingBoxXYZ()

@@ -1,6 +1,7 @@
-#pylint: disable=import-error,invalid-name,broad-except
+# pylint: disable=import-error,invalid-name,broad-except
 import clr
 import math
+
 # Import RevitAPI
 clr.AddReference("RevitAPI")
 import Autodesk
@@ -17,6 +18,7 @@ from pyrevit import forms
 logger = script.get_logger()
 output = script.get_output()
 
+
 class RoomOption(forms.TemplateListItem):
     # def __init__(self, room_element):
     #     super(RoomOption, self).__init__(room_element)
@@ -24,11 +26,16 @@ class RoomOption(forms.TemplateListItem):
     @property
     def name(self):
         """Room name."""
-        return '%s' % revit.query.get_name(self.item)
+        return "%s" % revit.query.get_name(self.item)
 
-rooms, elems= [], []
 
-col1 = FilteredElementCollector(revit.doc).OfCategory(BuiltInCategory.OST_Rooms).ToElements()
+rooms, elems = [], []
+
+col1 = (
+    FilteredElementCollector(revit.doc)
+    .OfCategory(BuiltInCategory.OST_Rooms)
+    .ToElements()
+)
 
 col2 = FilteredElementCollector(revit.doc).OfClass(ViewFamilyType).ToElements()
 
@@ -45,42 +52,43 @@ for room in col1:
 
 
 res = forms.SelectFromList.show(
-                                sorted([RoomOption(x) for x in rooms],
-                                       key=lambda x: x.Number),
-                                multiselect=True,
-                                # name_attr= 'Number',
-                                button_name='Select Rooms')
+    sorted([RoomOption(x) for x in rooms], key=lambda x: x.Number),
+    multiselect=True,
+    # name_attr= 'Number',
+    button_name="Select Rooms",
+)
 
 total_work = len(res)
 with revit.Transaction("Create Elevations"):
     for idx, r in enumerate(res):
-        roomName = r.LookupParameter("Name").AsString().upper()
+        roomName = r.LookupParameter("Name").AsString()
         roomNumber = r.LookupParameter("Number").AsString()
         bbox = r.get_BoundingBox(revit.doc.ActiveView)
         rMin = bbox.Min
         rMax = bbox.Max
-        roomCenter = (rMin + rMax)/2.0
+        roomCenter = (rMin + rMax) / 2.0
 
-        eleMarker = ElevationMarker.CreateElevationMarker(revit.doc, viewType.Id, roomCenter, 100)
+        eleMarker = ElevationMarker.CreateElevationMarker(
+            revit.doc, viewType.Id, roomCenter, 100
+        )
         ele1 = eleMarker.CreateElevation(revit.doc, revit.doc.ActiveView.Id, 1)
         ele2 = eleMarker.CreateElevation(revit.doc, revit.doc.ActiveView.Id, 2)
         ele3 = eleMarker.CreateElevation(revit.doc, revit.doc.ActiveView.Id, 3)
         ele4 = eleMarker.CreateElevation(revit.doc, revit.doc.ActiveView.Id, 0)
-        newName = "ELEVATION - " + roomName + " " + roomNumber + " - "
+        newName = "Elevation - " + roomName + " " + roomNumber + " - "
         # print(newName)
-        
+
         try:
             print('Creating Elevations for  "%s - %s"' % (roomNumber, roomName))
-            ele1.Name = newName + "NORTH"
-            ele2.Name = newName + "EAST"
-            ele3.Name = newName + "SOUTH"
-            ele4.Name = newName + "WEST"
+            ele1.Name = newName + "North"
+            ele2.Name = newName + "East"
+            ele3.Name = newName + "South"
+            ele4.Name = newName + "West"
 
         except ArgumentException:
-            message = 'View Name already exists.'
+            message = "View Name already exists."
             logger.warning(message)
 
         output.update_progress(idx + 1, total_work)
-        
+
 print("Completed\n")
-    
