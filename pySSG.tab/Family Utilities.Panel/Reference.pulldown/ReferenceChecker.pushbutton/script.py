@@ -48,6 +48,7 @@ with revit.Transaction("Create Subcategory"):
                 ref_plane_cat, "Weak References"
             )
             weak_subcat.LineColor = DB.Color(255, 0, 128)
+            # weak_subcat.SetLineWeight(5, DB.GraphicsStyleType.Projection)
             weak_subcat.SetLinePatternId(
                 ref_plane_cat.GetLinePatternId(DB.GraphicsStyleType.Projection),
                 DB.GraphicsStyleType.Projection,
@@ -57,7 +58,7 @@ with revit.Transaction("Create Subcategory"):
             not_subcat = revit.doc.Settings.Categories.NewSubcategory(
                 ref_plane_cat, "Not References"
             )
-            not_subcat.LineColor = DB.Color(0, 128, 255)
+            not_subcat.LineColor = DB.Color(225, 225, 255)
             not_subcat.SetLinePatternId(
                 ref_plane_cat.GetLinePatternId(DB.GraphicsStyleType.Projection),
                 DB.GraphicsStyleType.Projection,
