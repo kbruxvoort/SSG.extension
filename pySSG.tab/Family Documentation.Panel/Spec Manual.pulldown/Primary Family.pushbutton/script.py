@@ -1,6 +1,6 @@
 import itertools
 import math
-
+import System.Collections.Generic.IEnumerable as IEnumerable
 from itertools import groupby
 from datetime import date
 
@@ -329,7 +329,8 @@ if source_elements:
                     value = source_element.LookupParameter(k)
                     if not value:
                         value = ele_type.LookupParameter(k)
-                    p.Set(value.AsString())
+                    value = value.AsString()
+                    p.Set(str(value))
                 issue_date = sheet_1.get_Parameter(DB.BuiltInParameter.SHEET_ISSUE_DATE)
                 issue_date.Set(today)
                 print("\tMapping Parameters to Sheet 1")
