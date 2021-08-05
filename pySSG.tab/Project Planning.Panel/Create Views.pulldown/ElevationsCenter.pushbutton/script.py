@@ -57,10 +57,10 @@ if rooms:
                     
                     try:
                         print('Creating Elevations for  "%s - %s"' % (roomNumber, roomName))
-                        ele1.Name = newName + "North"
-                        ele2.Name = newName + "East"
-                        ele3.Name = newName + "South"
-                        ele4.Name = newName + "West"
+                        revit.update.set_name(ele1, newName + "North")
+                        revit.update.set_name(ele2, newName + "East")
+                        revit.update.set_name(ele3, newName + "South")
+                        revit.update.set_name(ele4, newName + "West")
 
                     except Exceptions.ArgumentException:
                         message = 'View Name already exists.'
