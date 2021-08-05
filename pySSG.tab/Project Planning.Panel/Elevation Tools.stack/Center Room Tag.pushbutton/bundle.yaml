@@ -1,0 +1,5 @@
+tooltip: Override the line weight of the cropbox of interior elevations.
+title: Override Elevation Cropbox
+author: Kyle Bruxvoort
+context:
+  - doc-project
