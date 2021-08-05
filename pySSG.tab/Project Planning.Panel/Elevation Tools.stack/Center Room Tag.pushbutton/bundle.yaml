@@ -1,5 +1,6 @@
-tooltip: Override the line weight of the cropbox of interior elevations.
-title: Override Elevation Cropbox
+tooltip: Centers all rooms as well as room tags in the active view
+title: Center Room and Tag
 author: Kyle Bruxvoort
 context:
   - doc-project
+  - active-plan-view 

@@ -5,26 +5,35 @@ from pyrevit import script
 
 output = script.get_output()
 logger = script.get_logger()
- 
-lineWeight = 3
 
-ogs = OverrideGraphicSettings().SetProjectionLineWeight(lineWeight)
 
-viewFamTypes = FilteredElementCollector(revit.doc).OfClass(ViewFamilyType).ToElements()
+filt = DB.ElementCategoryFilter(DB.BuiltInCategory.OST_RoomTags)
+collect = DB.FilteredElementCollector(revit.doc, revit.doc.ActiveView.Id).WhereElementIsNotElementType()
+collect = collect.WherePasses(filt).ToElements()
 
-views = FilteredElementCollector(revit.doc).OfClass(ViewSection).ToElements()
+categories = [DB.BuiltInCategory.OST_Rooms]
+rooms = [x for x in revit.query.get_elements_by_categories(categories) if x.Area > 0]
 
-elems = []
-for t in viewFamTypes:
-    if "Interior Elevation" in Element.Name.GetValue(t):
-        elems.append(t)
+if rooms:
+    with revit.Transaction("Center Rooms"):
+        for room in rooms:
+            bbox = room.get_BoundingBox(revit.doc.ActiveView)
+            center = (bbox.Max + bbox.Min) / 2.0
+            location = DB.UV(center.X, center.Y)
+            current_room = room.Location.Point
+            new_loc = center - current_room
+            room.Location.Move(new_loc)
 
-viewType = elems[0]
 
-with revit.Transaction("Override Crop Lineweight"):
-    for v in views:
-        if v.GetTypeId() == viewType.Id:
-            cropId = ElementId(int(v.Id.ToString())-1)
-            v.CropBoxActive = True
-            v.CropBoxVisible = True
-            v.SetElementOverrides(cropId, ogs)
+        if collect:
+            with revit.Transaction("Center Tags"):
+                for room_tag in collect:
+                    room = room_tag.Room
+                    bbox = room.get_BoundingBox(revit.doc.ActiveView)
+                    center = (bbox.Max + bbox.Min) / 2.0
+                    location = DB.UV(center.X, center.Y)
+                    current_room = room.Location.Point
+                    current_tag = room_tag.Location.Point
+                    new_loc = center - current_tag
+                    room_tag.Location.Move(new_loc)
+    
