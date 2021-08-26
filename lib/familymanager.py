@@ -1,0 +1,2 @@
+class FamilyParameter(object):
+    pass
