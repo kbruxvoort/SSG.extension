@@ -22,6 +22,20 @@ if settings.BIM_KEY:
         builtInCat, message="PICK A STUPID GROUP IDIOT"
     )
     if group:
+        group_type = group.GroupType
+        group_type_params = group_type.Parameters
+        category_name = "Model Group/Test"
+        group_name = "Enter Group Name"
+        category_param = [
+            x for x in group_type_params if x.Definition.Name == "CategoryName"
+        ]
+        group_name_param = [
+            x for x in group_type_params if x.Definition.Name == "Group Name"
+        ]
+        if category_param:
+            category_name = category_param[0].AsString()
+        if group_name_param:
+            group_name = group_name_param[0].AsString()
         group_members = group.GetMemberIds()
         members = [revit.doc.GetElement(id) for id in group_members]
 
@@ -44,19 +58,19 @@ if settings.BIM_KEY:
         Height = maxZ - minZ
 
         GroupedFamilies = []
-        GroupedFamilies.append(
-            GroupedFamily(
-                settings.BOUNDING_BOX_ID,
-                settings.BOUNDING_BOX_TYPE_ID,
-                Parameters=[
-                    Parameter("Width", Width, DataType="Length"),
-                    Parameter("Depth", Depth, DataType="Length"),
-                    Parameter("Height", Height, DataType="Length"),
-                    Parameter("Group Name", "Enter Group Name", DataType="Text"),
-                    Parameter("ENTER_Shape Number", 1, DataType="Integer"),
-                ],
-            )
+        bbox_family = GroupedFamily(
+            settings.BOUNDING_BOX_ID,
+            settings.BOUNDING_BOX_TYPE_ID,
+            Parameters=[
+                Parameter("Width", Width, DataType="Length"),
+                Parameter("Depth", Depth, DataType="Length"),
+                Parameter("Height", Height, DataType="Length"),
+                Parameter("Group Name", group_name, DataType="Text"),
+                Parameter("ENTER_Shape Number", 1, DataType="Integer"),
+            ],
         )
+        bbox_family.ProjectId = None
+        GroupedFamilies.append(bbox_family)
         ChildFamilies = []
         print(group.Name)
         print("Width={}, Depth={}, Height={}".format(Width, Depth, Height))
@@ -109,7 +123,13 @@ if settings.BIM_KEY:
                     )
                     child_fam.HostProjectId = host.Id.IntegerValue
                     child_fam.ProjectId = family.Id.IntegerValue
-                    ChildFamilies.append(child_fam)
+                    double_nested = False
+                    for child in ChildFamilies:
+                        if child.ProjectId == child_fam.HostProjectId:
+                            child.ChildModelGroups.append(child_fam)
+                            double_nested = True
+                    if double_nested is False:
+                        ChildFamilies.append(child_fam)
                 else:
                     fam = GroupedFamily(
                         ssgfid[0],
@@ -129,7 +149,7 @@ if settings.BIM_KEY:
         model_group = Family(
             group.Name,
             LoadMethod=1,
-            CategoryName="Model Group/Test",
+            CategoryName=category_name,
             FamilyObjectType="ModelGroup",
             GroupedFamilies=GroupedFamilies,
         )
