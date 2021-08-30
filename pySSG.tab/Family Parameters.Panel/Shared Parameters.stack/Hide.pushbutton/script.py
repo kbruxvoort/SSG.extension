@@ -1,8 +1,5 @@
-import clr
 import itertools
 
-clr.AddReference("RevitAPI")
-from Autodesk.Revit.DB import *
 from pyrevit import revit, DB, UI
 from pyrevit import script
 from pyrevit import forms
@@ -99,7 +96,7 @@ if selected_parameters:
                     )
                 )
                 new_param = revit.doc.FamilyManager.ReplaceParameter(
-                    p1, p2, BuiltInParameterGroup.INVALID, p1.IsInstance
+                    p1, p2, DB.BuiltInParameterGroup.INVALID, p1.IsInstance
                 )
                 # count += 1
                 # output.update_progress(count, max_progress)

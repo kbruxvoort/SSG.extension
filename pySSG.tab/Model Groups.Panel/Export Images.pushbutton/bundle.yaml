@@ -7,6 +7,4 @@ tooltip: This script exports images for each group in the active view. The group
 # bundle author
 author: Kyle Bruxvoort
 
-highlight: updated
-
 context: active-3d-view
