@@ -15,6 +15,9 @@ def is_close(number):
     return number
 
 
+BUILTIN_KEEP = ["Width", "Depth", "Height"]
+
+
 if settings.BIM_KEY:
     builtInCat = DB.BuiltInCategory.OST_IOSModelGroups
 
@@ -96,6 +99,7 @@ if settings.BIM_KEY:
                         if (
                             param.Definition.BuiltInParameter
                             == DB.BuiltInParameter.INVALID
+                            or param.Definition.Name in BUILTIN_KEEP
                         ):
                             if param.Definition.Name.startswith("z") == False:
                                 # print(param.Definition.Name, param.Definition.ParameterType)
