@@ -1,0 +1,13 @@
+engine:
+  full_frame: true
+
+# bundle title
+title: "File Only\nPublish"
+
+# bundle tooltip
+tooltip: This script will export the rfa to the admin database if it is an existing family.
+
+# bundle author
+author: Kyle Bruxvoort
+
+context: doc-family

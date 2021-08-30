@@ -174,11 +174,18 @@ if settings.BIM_KEY:
                                 )
                                 type_matches.append((revit_type, db_type, count))
                     formula = formula + '"ERROR"' + (")" * (count))
+                    fam_mgr.SetFormula(type_id_param, formula)
+                    fam_mgr.CurrentType = default_type
                     # print(formula)
                 else:
-                    formula = fam.FamilyTypes[0].Id
-                fam_mgr.SetFormula(type_id_param, formula)
-                fam_mgr.CurrentType = default_type
+                    try:
+                        formula = '"{}"'.format(fam.FamilyTypes[0].Id)
+                    except IndexError:
+                        print("No family types detected")
+                        formula = ""
+                    else:
+                        fam_mgr.SetFormula(type_id_param, formula)
+                        fam_mgr.CurrentType = default_type
                 print("\tFormulas set for Id parameters")
         else:
             raise Exception(
