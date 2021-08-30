@@ -1,0 +1,13 @@
+# bundle title
+title: "Export\nCurrent View"
+
+# bundle tooltip
+tooltip: This script exports a png of current view using SSG default settings.
+
+# bundle author
+author: Kyle Bruxvoort
+
+highlight: updated
+# context:
+#   - active-3d-view
+#   - selection

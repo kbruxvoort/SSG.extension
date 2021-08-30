@@ -12,7 +12,6 @@ class MatOption(forms.TemplateListItem):
     def name(self):
         """Mat Name"""
         try:
-            # return '{}: {}'.format(revit.query.get_name(self.item), revit.doc.GetElement(self.item.AppearanceAssetId).Name)
             return "[{}] {}: {}".format(
                 revit.doc.GetElement(self.item.AppearanceAssetId)
                 .GetRenderingAsset()
@@ -44,8 +43,8 @@ forms.check_modeldoc(revit.doc, exitscript=True)
 
 # make sure user is using 2019 or later
 app = revit.doc.Application
-if int(app.VersionNumber) < 2018:
-    forms.alert("You must use Revit 2018 or newer to use this script.", exitscript=True)
+if int(app.VersionNumber) < 2019:
+    forms.alert("You must use Revit 2019 or newer to use this script.", exitscript=True)
 
 # pick csv
 source_file = forms.pick_file(file_ext="csv")

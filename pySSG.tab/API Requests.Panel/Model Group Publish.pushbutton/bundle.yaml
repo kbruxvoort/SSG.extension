@@ -1,0 +1,13 @@
+engine:
+  full_frame: true
+
+# bundle title
+title: "Model Group\nPublish"
+
+# bundle tooltip
+tooltip: This script exports a model group as a dynamic model group to the admin database.
+
+# bundle author
+author: Kyle Bruxvoort
+
+context: doc-project

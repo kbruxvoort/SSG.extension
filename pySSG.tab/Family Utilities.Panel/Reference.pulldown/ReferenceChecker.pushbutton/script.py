@@ -1,12 +1,5 @@
-import clr
-import Autodesk
-
-clr.AddReference("RevitAPI")
-# from Autodesk.Revit.DB import FilteredElementCollector
 from pyrevit import revit, DB, UI
 from pyrevit import script
-
-# from pyrevit import forms
 
 from Autodesk.Revit.Exceptions import ArgumentException, InvalidOperationException
 

@@ -9,7 +9,7 @@ from pyrevit import forms
 output = script.get_output()
 logger = script.get_logger()
  
-lineWeight = 5
+lineWeight = 3
 
 ogs = OverrideGraphicSettings().SetProjectionLineWeight(lineWeight)
 

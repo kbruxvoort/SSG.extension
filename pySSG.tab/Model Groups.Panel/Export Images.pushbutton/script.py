@@ -1,12 +1,5 @@
 # pylint: disable=import-error,invalid-name,broad-except
-import clr
-
-# Import RevitAPI
-clr.AddReference("RevitAPI")
-import Autodesk
-from Autodesk.Revit.DB import *
-
-from pyrevit import revit, DB, UI
+from pyrevit import revit, DB
 from pyrevit import script
 from pyrevit import forms
 from pyrevit import HOST_APP
@@ -21,8 +14,8 @@ threeD_view = revit.doc.ActiveView
 # forms.check_viewtype(threeD_view, ViewType.ThreeD, exitscript=True)
 
 groups = (
-    FilteredElementCollector(revit.doc)
-    .OfClass(Group)
+    DB.FilteredElementCollector(revit.doc)
+    .OfClass(DB.Group)
     .WhereElementIsNotElementType()
     .ToElements()
 )
@@ -41,9 +34,9 @@ if total_work > 0:
             groupBB = group.get_BoundingBox(threeD_view)
             gMax = groupBB.Max
             gMin = groupBB.Min
-            height = XYZ(0, 0, gMax.Z).DistanceTo(XYZ(0, 0, gMin.Z))
+            height = DB.XYZ(0, 0, gMax.Z).DistanceTo(DB.XYZ(0, 0, gMin.Z))
             # print(height)
-            width = XYZ(gMax.X, 0, 0).DistanceTo(XYZ(gMin.X, 0, 0))
+            width = DB.XYZ(gMax.X, 0, 0).DistanceTo(DB.XYZ(gMin.X, 0, 0))
             # print(width)
             # if height > width:
             #     newWidth = height/2*1.5177
@@ -53,26 +46,26 @@ if total_work > 0:
             # else:
             #     newMaxP = XYZ(gMax.X + 1, gMax.Y + 1, gMax.Z + 1)
             #     newMinP = XYZ(gMin.X - 1, gMin.Y - 1, gMin.Z - 1)
-            newMaxP = XYZ(gMax.X + 1, gMax.Y + 1, gMax.Z + 1)
-            newMinP = XYZ(gMin.X - 1, gMin.Y - 1, gMin.Z - 1)
-            newBB = BoundingBoxXYZ()
+            newMaxP = DB.XYZ(gMax.X + 1, gMax.Y + 1, gMax.Z + 1)
+            newMinP = DB.XYZ(gMin.X - 1, gMin.Y - 1, gMin.Z - 1)
+            newBB = DB.BoundingBoxXYZ()
             newBB.Max = newMaxP
             newBB.Min = newMinP
 
-            ieo = ImageExportOptions(
+            ieo = DB.ImageExportOptions(
                 PixelSize=1186,
                 FilePath=target_folder + "\\" + group.Name,
-                FitDirection=FitDirectionType.Vertical,
-                HLRandWFViewsFileType=ImageFileType.PNG,
-                ShadowViewsFileType=ImageFileType.PNG,
-                ImageResolution=ImageResolution.DPI_300,
+                FitDirection=DB.FitDirectionType.Vertical,
+                HLRandWFViewsFileType=DB.ImageFileType.PNG,
+                ShadowViewsFileType=DB.ImageFileType.PNG,
+                ImageResolution=DB.ImageResolution.DPI_300,
                 # ExportRange = ExportRange.SetOfViews
-                ExportRange=ExportRange.VisibleRegionOfCurrentView,
+                ExportRange=DB.ExportRange.VisibleRegionOfCurrentView,
             )
 
             with revit.Transaction("Create Group View"):
-                threeD = View3D.CreateIsometric(revit.doc, viewTypeId)
-                View3D.SetSectionBox(threeD, newBB)
+                threeD = DB.View3D.CreateIsometric(revit.doc, viewTypeId)
+                DB.View3D.SetSectionBox(threeD, newBB)
                 threeD.Name = group.Name
 
             uidoc = HOST_APP.uiapp.ActiveUIDocument
