@@ -75,11 +75,12 @@ if settings.BIM_KEY:
         print(group.Name)
         print("Width={}, Depth={}, Height={}".format(Width, Depth, Height))
         print("Instances: ")
+
         for family in members:
+            Parameters = []
             parent_family = family.SuperComponent
             if not parent_family:
                 host = family.Host
-
                 rot = math.degrees(family.Location.Rotation)
                 print("\t{}: {}".format(family.Symbol.FamilyName, family.Name))
                 print(
@@ -89,6 +90,46 @@ if settings.BIM_KEY:
                         rot,
                     )
                 )
+                instance_params = family.Parameters
+                for param in instance_params:
+                    if param.IsReadOnly is False:
+                        if (
+                            param.Definition.BuiltInParameter
+                            == DB.BuiltInParameter.INVALID
+                        ):
+                            if param.Definition.Name.startswith("z") == False:
+                                # print(param.Definition.Name, param.Definition.ParameterType)
+                                if (
+                                    param.Definition.ParameterType
+                                    == DB.ParameterType.Length
+                                ):
+                                    p = Parameter(
+                                        param.Definition.Name,
+                                        param.AsDouble(),
+                                        DataType="Length",
+                                    )
+                                    Parameters.append(p)
+                                elif (
+                                    param.Definition.ParameterType
+                                    == DB.ParameterType.Integer
+                                ):
+                                    p = Parameter(
+                                        param.Definition.Name,
+                                        param.AsInteger(),
+                                        DataType="Integer",
+                                    )
+                                    Parameters.append(p)
+                                elif (
+                                    param.Definition.ParameterType
+                                    == DB.ParameterType.YesNo
+                                ):
+                                    p = Parameter(
+                                        param.Definition.Name,
+                                        param.AsInteger(),
+                                        DataType="Boolean",
+                                    )
+                                    Parameters.append(p)
+
                 type_params = family.Symbol.Parameters
                 ssgfid = [
                     x.AsString() for x in type_params if x.Definition.Name == "SSGFID"
@@ -120,7 +161,9 @@ if settings.BIM_KEY:
                         Width=is_close(round(family.Location.Point.X - minX, 7)),
                         Depth=is_close(round(family.Location.Point.Y - maxY, 7)),
                         Rotation=rot,
+                        Parameters=Parameters,
                     )
+                    # print(repr(Parameters))
                     child_fam.HostProjectId = host.Id.IntegerValue
                     child_fam.ProjectId = family.Id.IntegerValue
                     double_nested = False
@@ -137,7 +180,9 @@ if settings.BIM_KEY:
                         Width=is_close(round(family.Location.Point.X - minX, 7)),
                         Depth=is_close(round(family.Location.Point.Y - maxY, 7)),
                         Rotation=rot,
+                        Parameters=Parameters,
                     )
+                    # print(repr(Parameters))
                     fam.ProjectId = family.Id.IntegerValue
                     GroupedFamilies.append(fam)
 
