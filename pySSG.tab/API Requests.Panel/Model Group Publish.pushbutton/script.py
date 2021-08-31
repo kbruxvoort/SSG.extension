@@ -1,5 +1,6 @@
 import json
-import math
+
+from math import ceil, degrees
 
 from System.Net import WebClient
 
@@ -9,20 +10,32 @@ from fetchbim.family import Family, GroupedFamily
 from fetchbim.attributes import Parameter
 
 
-def is_close(number):
-    if -0.001 <= number <= 0.001:
-        number = 0
-    return number
+def isclose(a, b, rel_tol=1e-9, abs_tol=0.0):
+    return abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+
+
+def normalize_number(number):
+    if isclose(number, number // 1, abs_tol=0.001):
+        return number // 1
+    elif isclose(number, ceil(number), abs_tol=0.001):
+        return ceil(number)
+    else:
+        return round(number, 4)
+
+
+def normalize_angle(angle):
+    return int(round(angle, 0) % 360)
 
 
 BUILTIN_KEEP = ["Width", "Depth", "Height"]
+# ROUND_DIGITS = 3
 
 
 if settings.BIM_KEY:
     builtInCat = DB.BuiltInCategory.OST_IOSModelGroups
 
     group = revit.selection.pick_element_by_category(
-        builtInCat, message="PICK A STUPID GROUP IDIOT"
+        builtInCat, message="select a model group"
     )
     if group:
         group_type = group.GroupType
@@ -56,9 +69,9 @@ if settings.BIM_KEY:
         maxY = max([x[1] for x in max_list])
         maxZ = max([x[2] for x in max_list])
 
-        Width = maxX - minX
-        Depth = maxY - minY
-        Height = maxZ - minZ
+        Width = normalize_number(maxX - minX)
+        Depth = normalize_number(maxY - minY)
+        Height = normalize_number(maxZ - minZ)
 
         GroupedFamilies = []
         bbox_family = GroupedFamily(
@@ -84,12 +97,12 @@ if settings.BIM_KEY:
             parent_family = family.SuperComponent
             if not parent_family:
                 host = family.Host
-                rot = math.degrees(family.Location.Rotation)
+                rot = normalize_angle(degrees(family.Location.Rotation))
                 print("\t{}: {}".format(family.Symbol.FamilyName, family.Name))
                 print(
                     "\t\tX={}, Y={}, Rotation={}".format(
-                        family.Location.Point.X - minX,
-                        family.Location.Point.Y - maxY,
+                        normalize_number(family.Location.Point.X - minX),
+                        normalize_number(family.Location.Point.Y - maxY),
                         rot,
                     )
                 )
@@ -109,7 +122,7 @@ if settings.BIM_KEY:
                                 ):
                                     p = Parameter(
                                         param.Definition.Name,
-                                        param.AsDouble(),
+                                        normalize_number(param.AsDouble()),
                                         DataType="Length",
                                     )
                                     Parameters.append(p)
@@ -162,8 +175,12 @@ if settings.BIM_KEY:
                     child_fam = GroupedFamily(
                         ssgfid[0],
                         ssgtid[0],
-                        Width=is_close(round(family.Location.Point.X - minX, 7)),
-                        Depth=is_close(round(family.Location.Point.Y - maxY, 7)),
+                        Width=normalize_number(
+                            normalize_number(family.Location.Point.X - minX)
+                        ),
+                        Depth=normalize_number(
+                            normalize_number(family.Location.Point.Y - maxY)
+                        ),
                         Rotation=rot,
                         Parameters=Parameters,
                     )
@@ -181,8 +198,12 @@ if settings.BIM_KEY:
                     fam = GroupedFamily(
                         ssgfid[0],
                         ssgtid[0],
-                        Width=is_close(round(family.Location.Point.X - minX, 7)),
-                        Depth=is_close(round(family.Location.Point.Y - maxY, 7)),
+                        Width=normalize_number(
+                            normalize_number(family.Location.Point.X - minX)
+                        ),
+                        Depth=normalize_number(
+                            normalize_number(family.Location.Point.Y - maxY)
+                        ),
                         Rotation=rot,
                         Parameters=Parameters,
                     )

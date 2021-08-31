@@ -1,4 +1,4 @@
-from previt import revit, DB
+from pyrevit import revit, DB
 
 
 def get_value(fam_type, param):
@@ -21,3 +21,10 @@ def get_value(fam_type, param):
         if e:
             value = e.Name
     return value
+
+
+def get_parameter(param_name, params):
+    try:
+        return [p for p in params if p.Definition.Name == param_name][0]
+    except IndexError:
+        return None
