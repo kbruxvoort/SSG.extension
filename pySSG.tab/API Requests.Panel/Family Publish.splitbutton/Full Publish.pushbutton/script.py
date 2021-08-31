@@ -225,6 +225,7 @@ if settings.BIM_KEY:
     save_ops.Compact = True
     revit.doc.SaveAs(file_path, save_ops)
     revit_fam = File(file_path)
+    fam.Files = []
     fam.add_files(revit_fam)
 
     data = fam.to_json()
