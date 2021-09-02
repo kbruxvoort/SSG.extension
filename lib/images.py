@@ -21,3 +21,5 @@ def export_current_view():
         )
 
         revit.doc.ExportImage(DEFAULT_IMAGE_OPTIONS)
+
+        return dialog.FileName
