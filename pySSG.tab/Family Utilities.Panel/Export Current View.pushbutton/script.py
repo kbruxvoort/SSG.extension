@@ -5,6 +5,7 @@ from Autodesk.Revit import DB
 from Autodesk.Revit.DB import Transaction
 from Autodesk.Revit.Exceptions import ArgumentException
 
+
 from PIL import Image
 
 import clr
