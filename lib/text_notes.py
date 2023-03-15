@@ -33,8 +33,7 @@ class TextType(object):
             options.AppendUnitSymbol = True
             
             font_size = DB.UnitFormatUtils.Format(
-                doc.GetUnits(), 
-                # DB.DisplayUnitType.DUT_DECIMAL_FEET, 
+                doc.GetUnits(),
                 DB.UnitType.UT_Length,
                 size,
                 False,
