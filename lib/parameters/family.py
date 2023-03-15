@@ -1,4 +1,4 @@
-from Autodesk.Revit.Exceptions import InvalidOperationException
+from Autodesk.Revit.Exceptions import InvalidOperationException, ArgumentException
 
 from pyrevit import revit, DB
 
@@ -108,3 +108,22 @@ def modify_parameter_group(parameter, parameter_group):
     except InvalidOperationException as ie:
         print('"{}" is a builtin parameter and its group cannot be set'.format(parameter.Definition.Name))
         
+def replace_with_shared(fam_param, shared_param):
+    if fam_param.Definition.Name == shared_param.Name:
+        revit.doc.FamilyManager.RenameParameter(
+            fam_param, fam_param.Definition.Name + "_Temp"
+        )
+    try:
+        return revit.doc.FamilyManager.ReplaceParameter(
+            fam_param,
+            shared_param,
+            fam_param.Definition.ParameterGroup,
+            fam_param.IsInstance,
+        )
+
+    except InvalidOperationException as ie:
+        print("InvalidOperationExcpetion: {}".format(ie))
+    except ArgumentException as ae:
+        print("ArgumentExcpetion: {}".format(ae))
+
+    

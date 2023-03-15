@@ -7,6 +7,7 @@ import io
 import requests
 
 from pyrevit import forms
+from fetch_client import Client, get_auth
 
     
 class FamilyOption(forms.TemplateListItem):
@@ -14,9 +15,10 @@ class FamilyOption(forms.TemplateListItem):
     def name(self):
         return self.item["Name"]
     
-    
-base_url = "https://www.ssgbim.com/api/"
-bim_key = os.environ.get('BIM_KEY')
+# fetch = Client(auth=get_auth())    
+# base_url = "https://www.ssgbim.com/api/"
+# bim_key = os.environ.get('BIM_KEY')
+bim_key = get_auth()
 
 if bim_key:
 
@@ -28,7 +30,10 @@ if bim_key:
     s = requests.Session()
     s.headers.update(headers)
 
-    search_text = forms.ask_for_string()
+    search_text = forms.ask_for_string(
+        title="Family Search",
+        prompt="Input search string to find families"
+    )
     if search_text:
 
         params = {

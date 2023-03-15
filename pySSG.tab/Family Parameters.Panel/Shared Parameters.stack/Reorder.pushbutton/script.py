@@ -12,47 +12,6 @@ from parameters.family import (
 )
 
 
-# def param_has_value(fam_type, parameter):
-#     if parameter.IsDeterminedByFormula:
-#         return True
-#     if parameter.Definition.ParameterType == DB.ParameterType.Text:
-#         return family.get_value(fam_type, parameter)
-#     else:
-#         return fam_type.HasValue(parameter)
-
-# def split_name(param_name):
-#     name_split = param_name.split("_")
-#     prefix = None
-#     if len(name_split) > 1:
-#         prefix = name_split[0].strip()
-#         suffix = " ".join(name_split[1:]).strip()
-#     else:
-#         suffix = param_name
-#     return (prefix, suffix)
-
-
-# def sort_parameter_into_group(parameter, param_map_dict):
-#     if parameter.UserModifiable is False:
-#         return parameter.Definition.ParameterGroup
-#     if parameter.Definition.Visible is False:
-#         return DB.BuiltInParameterGroup.INVALID
-#     name = parameter.Definition.Name
-#     prefix, suffix = split_name(name)
-
-
-    # if prefix:
-    #     if prefix.upper() == "ENTER" and suffix.lower() not in param_map_dict:
-    #         return DB.BuiltInParameterGroup.PG_CONSTRUCTION
-    #     for k,v in param_map_dict.items():
-    #         if k.upper() == prefix.upper():
-    #             return v
-    # if suffix:
-    #     for k,v in param_map_dict.items():
-    #         if k.lower() in suffix.lower():
-    #             return v
-    # return parameter.Definition.ParameterGroup
-
-
 def prefix_sort(param):
     name = param.Definition.Name
     return split_name(name)
@@ -154,7 +113,6 @@ param_dict = {
 for p in params:
     group = sort_parameter_into_group(p, PARAM_MAP)
     if group:
-        # print(group)
         if group in param_dict:
             param_dict[group].append(p)
         else:
@@ -168,15 +126,10 @@ for key, value in param_dict.items():
 
 
 with revit.Transaction("Reorder parameters"):
-    # params = revit.doc.FamilyManager.Parameters
-    # for p in params:
-    #     if p.UserModifiable:
-    #         family.modify_parameter_group(p, DB.BuiltInParameterGroup.PG_IDENTITY_DATA)
     param_list = List[DB.FamilyParameter]()
     current_type = revit.doc.FamilyManager.CurrentType
     for k,v in param_dict.items():
         for param in v:
-            # print("{}: HasValue={}: Value={}").format(param.Definition.Name, current_type.HasValue(param), family.get_value(current_type, param))
             if param.UserModifiable:
                 modify_parameter_group(param, k)
             param_list.Add(param)
