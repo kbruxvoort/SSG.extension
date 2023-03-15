@@ -7,7 +7,7 @@ import requests
 import Autodesk.Revit.DB.ExtensibleStorage as es
 
 from System import Guid
-from pyrevit import forms
+from pyrevit import forms, script
 from parameters.family import get_value
 from extensible_storage import FETCH_SCHEMA_GUID
 
@@ -27,34 +27,39 @@ def validate_string(token_string):
     
     
 def get_auth():
-    bim_key = os.environ["BIM_KEY"]
+    bim_key = os.environ.get("BIM_KEY")
     if not bim_key:
-        string = forms.ask_for_string(
-            title="'BIM_KEY not found in environment variables",
-            prompt="Enter Fetch API Token"
-        )
-        if string:
-            if validate_string(string) is True:
-                bim_key = string
-                save_key = forms.alert(
-                    warn_icon=False,
-                    yes=True,
-                    no=True,
-                    ok=False,
-                    msg="Would you like to save token to environment variables?"
-                )
-                if save_key:
-                    os.environ["BIM_KEY"] = bim_key
-                    forms.alert(
-                        msg="Your computer may require a restart for environment variable to be read.",
-                        cancel=False
+        my_config = script.get_config("BIM_KEY")
+        bim_key = my_config.get_option("token", "")
+        if not bim_key:
+            string = forms.ask_for_string(
+                title="'BIM_KEY not found in environment variables",
+                prompt="Enter Fetch API Token"
+            )
+            if string:
+                if validate_string(string) is True:
+                    bim_key = string
+                    my_config.token = string
+                    script.save_config()
+                    save_key = forms.alert(
+                        warn_icon=False,
+                        yes=True,
+                        no=True,
+                        ok=False,
+                        msg="Would you like to save token to environment variables?"
                     )
+                    if save_key:
+                        os.environ["BIM_KEY"] = bim_key
+                        forms.alert(
+                            msg="Your computer may require a restart for environment variable to be read.",
+                            cancel=False
+                        )
 
-            else:
-                forms.alert(
-                    msg="token is not valid",
-                    exitscript=True
-                    )
+                else:
+                    forms.alert(
+                        msg="token is not valid",
+                        exitscript=True
+                        )
     return bim_key
 
 
