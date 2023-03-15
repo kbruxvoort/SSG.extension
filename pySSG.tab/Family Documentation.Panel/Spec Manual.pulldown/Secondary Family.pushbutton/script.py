@@ -55,14 +55,14 @@ if source_elements:
     names_3d = []
     all_3d = DB.FilteredElementCollector(revit.doc).OfClass(DB.View3D).ToElements()
     for v in all_3d:
-        names_3d.append(v.ViewName)
+        names_3d.append(v.Name)
 
     # Get the view templates required
     secondary_template = []
     all_views = DB.FilteredElementCollector(revit.doc).OfClass(DB.View).ToElements()
     for view in all_views:
         if view.IsTemplate:
-            if view.ViewName == "SSG_3D - PDF Secondary":
+            if view.Name == "SSG_3D - PDF Secondary":
                 secondary_template.append(view)
 
 
@@ -116,7 +116,7 @@ if source_elements:
 
                     # Check to see if view already exists
                     if ele_name in names_3d:
-                        view_3d = [v for v in all_3d if v.ViewName == ele_name][0]
+                        view_3d = [v for v in all_3d if v.Name == ele_name][0]
                         print("\t3D view already exists. Placing view on new sheet")
                         
                     else:

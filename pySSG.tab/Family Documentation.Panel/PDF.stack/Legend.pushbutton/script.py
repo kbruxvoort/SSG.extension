@@ -238,7 +238,7 @@ if form.show():
                     )
                     ele1.ViewTemplateId = view_temp.Id
                     try:
-                        ele1.ViewName = ele.Symbol.FamilyName + "-" + str(count)
+                        ele1.Name = ele.Symbol.FamilyName + "-" + str(count)
                     except Exceptions.ArgumentException:
                         log.warning(
                             "Failed to rename. "

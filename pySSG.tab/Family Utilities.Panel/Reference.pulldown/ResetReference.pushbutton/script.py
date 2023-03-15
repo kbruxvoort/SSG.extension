@@ -1,17 +1,51 @@
 from pyrevit import revit, DB
 
 
-from Autodesk.Revit.Exceptions import InvalidOperationException
+ref_style_names = [
+    "pySSG_strong",
+    "pySSG_weak",
+    "pySSG_not_ref",
+]
 
-col = DB.FilteredElementCollector(revit.doc).OfClass(DB.ReferencePlane).ToElements()
+references = DB.FilteredElementCollector(revit.doc).OfClass(DB.ReferencePlane).ToElements()
+if references:
+    ref_cat = references[0].Category
 
-with revit.Transaction("Create Subcategory"):
-    ref_plane_cat = col[0].Category
+    with revit.Transaction("Reset References"):
+        subcat_ids = []
+        # turn off isolate
+        if revit.active_view.IsTemporaryHideIsolateActive():
+            revit.active_view.DisableTemporaryViewMode(
+                DB.TemporaryViewMode.TemporaryHideIsolate
+            )
+        
+        # remove subcategory from references
+        for ref in references:
+            param = ref.get_Parameter(DB.BuiltInParameter.CLINE_SUBCATEGORY)
+            param.Set(ref_cat.Id)
+        
+        # delete subcategories and line patterns
+        ref_subcats = ref_cat.SubCategories
+        for name in ref_style_names:
+            pattern_element = DB.LinePatternElement.GetLinePatternElementByName(revit.doc, name)
+            if pattern_element:
+                revit.doc.Delete(pattern_element.Id)
 
-    try:
-        for r in col:
-            param = r.get_Parameter(DB.BuiltInParameter.CLINE_SUBCATEGORY)
-            param.Set(ref_plane_cat.Id)
+            # match subcats
+            for subcat in ref_subcats:
+                if subcat.Name == name:
+                    subcat_ids.append(subcat.Id)
+                    break
+        
+        # delete subcategories
+        for _id in subcat_ids:
+            revit.doc.Delete(_id)
+   
+        
+        
 
-    except InvalidOperationException:
-        print("Subcategory Name already Exists")
+                
+        
+            
+        
+

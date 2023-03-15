@@ -1,33 +1,16 @@
-#pylint: disable=import-error,invalid-name,broad-except
-from Autodesk.Revit.DB import *
+from pyrevit import revit, DB, script
 
-from pyrevit import revit
-from pyrevit import script
-from pyrevit import forms
+my_config = script.get_config("override cropbox")
+line_weight = my_config.get_option("line_weight", 6) 
 
-
-output = script.get_output()
-logger = script.get_logger()
- 
-lineWeight = 3
-
-ogs = OverrideGraphicSettings().SetProjectionLineWeight(lineWeight)
-
-viewFamTypes = FilteredElementCollector(revit.doc).OfClass(ViewFamilyType).ToElements()
-
-views = FilteredElementCollector(revit.doc).OfClass(ViewSection).ToElements()
-
-elems = []
-for t in viewFamTypes:
-    if "Interior Elevation" in Element.Name.GetValue(t):
-        elems.append(t)
-
-viewType = elems[0]
+ogs = DB.OverrideGraphicSettings().SetProjectionLineWeight(int(line_weight))
+view_sections = DB.FilteredElementCollector(revit.doc).OfClass(DB.ViewSection).ToElements()
 
 with revit.Transaction("Override Crop Lineweight"):
-    for v in views:
-        if v.GetTypeId() == viewType.Id:
-            cropId = ElementId(int(v.Id.ToString())-1)
-            v.CropBoxActive = True
-            v.CropBoxVisible = True
-            v.SetElementOverrides(cropId, ogs)
+    for v in view_sections:
+        if not v.IsTemplate:
+            if v.ViewType == DB.ViewType.Elevation:
+                crop_id = DB.ElementId(int(v.Id.ToString())-1)
+                v.CropBoxActive = True
+                v.CropBoxVisible = True
+                v.SetElementOverrides(crop_id, ogs)

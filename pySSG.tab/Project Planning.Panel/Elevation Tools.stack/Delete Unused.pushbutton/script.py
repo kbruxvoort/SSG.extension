@@ -1,52 +1,48 @@
-# pylint: disable=import-error,invalid-name,broad-except
-from Autodesk.Revit.DB import *
-
-from pyrevit import revit
-from pyrevit import script
-from pyrevit import forms
+from pyrevit import revit, forms, DB
 
 
-output = script.get_output()
-logger = script.get_logger()
 
-viewFamTypes = FilteredElementCollector(revit.doc).OfClass(ViewFamilyType).ToElements()
+# viewFamTypes = DB.FilteredElementCollector(revit.doc).OfClass(DB.ViewFamilyType).ToElements()
 
-views = FilteredElementCollector(revit.doc).OfClass(ViewSection).ToElements()
+views = DB.FilteredElementCollector(revit.doc).OfClass(DB.ViewSection).ToElements()
 
-elems = []
-for t in viewFamTypes:
-    if "Interior Elevation" in Element.Name.GetValue(t):
-        elems.append(t)
+# elems = []
+# for t in viewFamTypes:
+#     if "Interior Elevation" in DB.Element.Name.GetValue(t):
+#         elems.append(t)
 
-viewType = elems[0]
+# viewType = elems[0]
 
+with revit.TransactionGroup("Delete Unused Elevations"):
+    with revit.Transaction("Delete Elevations"):
+        count = 0
+        for v in views:
+            if v.GetTypeId() == revit.doc.GetDefaultElementTypeId(DB.ElementTypeGroup.ViewTypeElevation):
+                param_id = DB.ElementId(DB.BuiltInParameter.ALL_MODEL_MANUFACTURER)
+                param_prov = DB.ParameterValueProvider(param_id)
+                param_begins = DB.FilterStringBeginsWith()
+                value_rule = DB.FilterStringRule(
+                    param_prov, 
+                    param_begins, 
+                    "Southwest Solutions Group", 
+                    False
+                )
+                filt = DB.ElementParameterFilter(value_rule)
+                fam = DB.FilteredElementCollector(revit.doc, v.Id) \
+                                                .WhereElementIsNotElementType() \
+                                                .WherePasses(filt) \
+                                                .FirstElement()
+                if not fam:
+                    count += 1
+                    revit.doc.Delete(v.Id)
 
-for idx, v in enumerate(views):
-    if v.GetTypeId() == viewType.Id:
-        manufacturer_param_id = ElementId(BuiltInParameter.ALL_MODEL_MANUFACTURER)
-        manufacturer_param_prov = ParameterValueProvider(manufacturer_param_id)
-        param_begins = FilterStringBeginsWith()
-        manufacturer_value_rule = FilterStringRule(
-            manufacturer_param_prov, param_begins, "Southwest Solutions Group", False
-        )
-        filt = ElementParameterFilter(manufacturer_value_rule)
-        # filt = ElementCategoryFilter(BuiltInCategory.OST_Rooms)
-        collect = FilteredElementCollector(
-            revit.doc, v.Id
-        ).WhereElementIsNotElementType()
-        collect = collect.WherePasses(filt)
-        fam = collect.FirstElement()
-        # print(fam)
-        if not fam:
-            with revit.Transaction("Delete Unused Elevation"):
-                print('Deleting "%s"' % v.Name)
-                revit.doc.Delete(v.Id)
+    markers = DB.FilteredElementCollector(revit.doc) \
+                                        .OfClass(DB.ElevationMarker) \
+                                        .ToElements()
+    with revit.Transaction("Delete empty markers"):
+        for marker in markers:
+            if marker.CurrentViewCount == 0:
+                with revit.Transaction("Delete Unused Markers"):
+                    revit.doc.Delete(marker.Id)
 
-markers = FilteredElementCollector(revit.doc).OfClass(ElevationMarker).ToElements()
-count = 0
-for marker in markers:
-    if marker.CurrentViewCount == 0:
-        count += 1
-        with revit.Transaction("Delete Unused Markers"):
-            revit.doc.Delete(marker.Id)
-print("%s Unused Markers Deleted" % str(count))
+    forms.alert(msg="{} elevation(s) deleted".format(count))

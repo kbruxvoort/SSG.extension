@@ -50,6 +50,8 @@ if rooms:
         for x in revit.query.get_types_by_class(DB.ViewFamilyType)
         if revit.query.get_name(x) == type_name
     ]
+    if not view_types:
+        view_types = [revit.doc.GetElement(revit.doc.GetDefaultElementTypeId(DB.ElementTypeGroup.ViewTypeElevation))]
     view_names = [
         revit.query.get_name(x) for x in revit.query.get_elements_by_class(DB.View)
     ]

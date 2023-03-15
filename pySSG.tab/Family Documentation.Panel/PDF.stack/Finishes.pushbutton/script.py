@@ -237,7 +237,7 @@ if form.show():
                     plan1.ViewTemplateId = view_temp.Id
                     try:
                         plan1.Name = mat.Name
-                        # plan1.ViewName = mat.Name
+                        # plan1.Name = mat.Name
                     except Exceptions.ArgumentException:
                         print("Failed to name view " + mat.Name)
 

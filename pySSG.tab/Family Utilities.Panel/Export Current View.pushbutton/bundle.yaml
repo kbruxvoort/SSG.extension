@@ -1,13 +1,11 @@
 # bundle title
-title: "Export\nCurrent View"
+title: "Export\nSelection"
 
 # bundle tooltip
 tooltip: This script sets the view template, exports a png of the current view, and then crops/resizes the image to match Large, Medium, and Small image sizes.
 
 # bundle author
 author: Kyle Bruxvoort
-
-highlight: updated
 
 context:
   - active-3d-view

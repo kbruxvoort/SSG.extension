@@ -1,8 +1,5 @@
-engine:
-  full_frame: true
-
 # bundle title
-title: "Model Group\nPublish"
+title: "Group\nPublish"
 
 # bundle tooltip
 tooltip: This script exports a model group as a dynamic model group to the admin database.

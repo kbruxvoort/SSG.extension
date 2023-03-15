@@ -80,13 +80,13 @@ class ReValueWindow(forms.WPFWindow):
                         and param.StorageType == DB.StorageType.String:
                     unique_params.add(param.Definition.Name)
             # grab element family parameters
-            # if element.Family:
-            #     for param in element.Family.Parameters:
-            #         if not param.IsReadOnly \
-            #                 and param.StorageType == DB.StorageType.String:
-            #             unique_params.add(
-            #                 'Family: {}'.format(param.Definition.Name)
-            #                 )
+            if element.Family:
+                for param in element.Family.Parameters:
+                    if not param.IsReadOnly \
+                            and param.StorageType == DB.StorageType.String:
+                        unique_params.add(
+                            'Family: {}'.format(param.Definition.Name)
+                            )
 
         all_params = ['Name', 'Family: Name']
         all_params.extend(sorted(list(unique_params)))

@@ -39,7 +39,7 @@ views = []
 col2 = FilteredElementCollector(revit.doc).OfClass(View3D).ToElements()
 for view in col2:
     if view.IsTemplate == False:
-        views.append(view.ViewName)
+        views.append(view.Name)
 
 
 total_work = len(rooms)
@@ -70,8 +70,8 @@ for idx, room in enumerate(rooms):
             # box.Max = Max[count]
             # bbox.append(box)
             a = View3D.SetSectionBox(threeD, newBB)
-            threeD.ViewName = newName
-            print("Creating 3D View: %s" % threeD.ViewName)
+            threeD.Name = newName
+            print("Creating 3D View: %s" % threeD.Name)
 
         else:
             message = 'View "%s" already exists' % newName

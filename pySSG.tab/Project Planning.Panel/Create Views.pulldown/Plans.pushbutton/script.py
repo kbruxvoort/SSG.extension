@@ -31,7 +31,7 @@ views = []
 col2 = FilteredElementCollector(revit.doc).OfClass(ViewPlan).ToElements()
 for view in col2:
     if view.IsTemplate == False:
-        views.append(view.ViewName)
+        views.append(view.Name)
 
 
 filter = Architecture.RoomFilter()
@@ -74,30 +74,33 @@ for idx, room in enumerate(collector):
 
             # Name the New View
 
-            roomView.ViewName = newName
-            print("Creating plan: %s" % roomView.ViewName)
+            roomView.Name = newName
+            print("Creating plan: %s" % roomView.Name)
 
         else:
             message = 'View "%s" already exists' % newName
             logger.warning(message)
 
         try:
-            # Find Center of Room and Move it
+        #     # Find Center of Room and Move it
             roomId = LinkElementId(room.Id)
-            bbox = roomView.CropBox
-            XYZLocation = (bbox.Max + bbox.Min) / 2.0
-            location = Autodesk.Revit.DB.UV(XYZLocation.X, XYZLocation.Y)
+        #     bbox = roomView.CropBox
+        #     XYZLocation = (bbox.Max + bbox.Min) / 2.0
+            
+            # location = Autodesk.Revit.DB.UV(XYZLocation.X, XYZLocation.Y)
             current = room.Location.Point
-            newloc = XYZLocation - current
-            room.Location.Move(newloc)
+            location = Autodesk.Revit.DB.UV(current.X, current.Y)
+        #     newloc = XYZLocation - current
+        #     room.Location.Move(newloc)
 
-            # Tag Room
+        #     # Tag Room
             roomTag = revit.doc.Create.NewRoomTag(roomId, location, roomView.Id)
-            roomTag.RoomTagType = room_tag.RoomTagType
-            print("-Tagging Room")
-        except:
+            # roomTag = revit.doc.Create.NewRoomTag(roomId, location, roomView.Id)
+            # roomTag.RoomTagType = room_tag.RoomTagType
+        #     # print("-Tagging Room")
+        except Exception as e:
             message = 'Room tag for "%s" already exists' % roomName
-            logger.warning(message)
+            logger.warning(e)
             continue
         output.update_progress(idx + 1, total_work)
 print("Completed\n")

@@ -1,0 +1,4 @@
+C:\Users\kbruxvoort\Extensions\SSG.extension\WPF_Project\WPF_Project\obj\Debug\WPF_Project.csproj.AssemblyReference.cache
+C:\Users\kbruxvoort\Extensions\SSG.extension\WPF_Project\WPF_Project\obj\Debug\publish.baml
+C:\Users\kbruxvoort\Extensions\SSG.extension\WPF_Project\WPF_Project\obj\Debug\WPF_Project_MarkupCompile.cache
+C:\Users\kbruxvoort\Extensions\SSG.extension\WPF_Project\WPF_Project\obj\Debug\WPF_Project_MarkupCompile.lref

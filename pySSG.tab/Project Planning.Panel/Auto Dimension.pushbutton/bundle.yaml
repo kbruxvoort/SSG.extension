@@ -1,0 +1,9 @@
+tooltip: This script creates some dimensions hopefully.
+title: "Auto\nDimension"
+author: Kyle Bruxvoort
+context:
+  - doc-project
+  - any:
+    - active-elevation-view
+    - active-section-view
+    - active-plan-view
