@@ -94,7 +94,7 @@ class SharedParameterFile:
 
         
     def find_group_by_name(self, group_name):
-        return self.file.Group.get_Item(group_name)
+        return self.file.Groups.get_Item(group_name)
     
         
     def find_shared_by_name(self, group_name, definiton_name):
@@ -104,7 +104,7 @@ class SharedParameterFile:
             return definition
         
         
-    def query(self, group_name=None, guid=None, name=None, param_type=None, hidden=None):
+    def query(self, group_name=None, guid=None, name=None, param_type=None, hidden=None, first_only=False):
         definitions = []
         if group_name:
             groups = self.file.Groups
@@ -134,8 +134,8 @@ class SharedParameterFile:
         elif hidden is False:
             definitions = filter(lambda x: x.Visible == True, definitions)
                   
-        if len(definitions) == 1:
-            return definitions[0]
+        if first_only is True:
+            return next(iter(definitions), None)
         else:
             return sorted(definitions, key=lambda d: (d.OwnerGroup, d.Name))
         
@@ -181,26 +181,6 @@ class SharedParameterFile:
             except ArgumentException as ae:
                 print('"{}" already exists: {}'.format(name, ae))
             
-
-def replace_with_shared(fam_param, shared_param):
-    if fam_param.Definition.Name == shared_param.Name:
-        revit.doc.FamilyManager.RenameParameter(
-            fam_param, fam_param.Definition.Name + "_Temp"
-        )
-    try:
-        replaced_param = revit.doc.FamilyManager.ReplaceParameter(
-            fam_param,
-            shared_param,
-            fam_param.Definition.ParameterGroup,
-            fam_param.IsInstance,
-        )
-
-    except InvalidOperationException as ie:
-        print("InvalidOperationExcpetion: {}".format(ie))
-    except ArgumentException as ae:
-        print("ArgumentExcpetion: {}".format(ae))
-
-    return replaced_param
 
 def extract_largest_index(string_list):
     largest_number = 0
