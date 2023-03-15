@@ -4,7 +4,7 @@ import Autodesk.Revit.DB.ExtensibleStorage as es
 
 from pyrevit import revit, script, forms, DB
 from extensible_storage import HIDDEN_SCHEMA_GUID
-from parameters import shared
+from parameters import SharedParameterFile, extract_largest_index
 
 
 
@@ -13,15 +13,13 @@ from parameters import shared
 app = revit.doc.Application
 
 # make sure we can access shared parameters
-definition_file = app.OpenSharedParameterFile()
-if not definition_file:
-    definition_file = shared.set_file(app)
+definition_file = SharedParameterFile()
+
 
 # make sure exstensible storage schema exists
 if definition_file:
     schema = es.Schema.Lookup(HIDDEN_SCHEMA_GUID)
     if not schema:
-        # print("Making schema!")
         builder = es.SchemaBuilder(HIDDEN_SCHEMA_GUID)
         builder.SetReadAccessLevel(es.AccessLevel.Public)
         builder.SetWriteAccessLevel(es.AccessLevel.Public)
@@ -74,9 +72,10 @@ if definition_file:
         
         # get pySSG parameter group or create it if it doesn't exist
         group_name = "pySSG Hidden"
-        def_group = definition_file.Groups.get_Item(group_name)
+        def_group = definition_file.find_group_by_name(group_name)
+        # def_group = definition_file.Groups.get_Item(group_name)
         if not def_group:
-            def_group = definition_file.Groups.Create(group_name)
+            def_group = definition_file.create_group(group_name)
         
         # group existing hidden parameters into group by type
         ext_type_dict = {}
@@ -87,39 +86,31 @@ if definition_file:
                 ext_type_dict[ed.ParameterType].append(ed)
                 
         # loop through our grouped parameters
-        with revit.Transaction("hide parameters"):           
+        with revit.Transaction("hide parameters"):
+            count = 0           
             for k,v in type_dict.items():
-                # print(k, [p.Definition.Name for p in v])
                 # see if there are matching hidden parameters
                 try:
                     sorted(ext_type_dict[k], key=lambda x: x.Name)
                 except KeyError:
                     ext_type_dict[k] = []
 
-                max_num = shared.extract_largest_index([d.Name for d in def_group.Definitions if d.ParameterType == k])
+                max_num = extract_largest_index([d.Name for d in def_group.Definitions if d.ParameterType == k])
                 for param in v:
                     # check if there are matching parameters. remove from list so we don't use it again.
                     if len(ext_type_dict[k]) > 0:
                         ext_def = ext_type_dict[k].pop()
-                        # print("Using {} as a {} parameter".format(ext_def.Name,str(k)))
+
                     else:
                         # Create new parameter in pySSG group if not enough exist.
-                        # print("Need to create a new {} ext def".format(str(k)))
-                        # print(k)
-                        # print(def_group)
-                        # print(def_group.Definitions)
                         existing_params = [d.Name for d in def_group.Definitions if d.ParameterType == k]
-                        # print(existing_params)
-                        # param_index = shared.extract_largest_index([d.Name for d in def_group.Definitions if d.ParameterType == k])
                         new_name = "z" + str(k) + format(max_num + 1, '02d')
                         description = "Hidden {} type parameter".format(k)
-                        # print("Creating parameter '{}'".format(new_name))
-                        ext_def = shared.create_definition(
-                            app, 
-                            "pySSG Hidden",
-                            new_name,
-                            k,
-                            description,
+                        ext_def = definition_file.create_definition(
+                            group_name="pySSG Hidden",
+                            name=new_name,
+                            parameter_type=k,
+                            description=description,
                             visible=False
                         )
                         max_num += 1
@@ -138,6 +129,11 @@ if definition_file:
                         "HiddenName": ext_def.Name, 
                         "HiddenGuid": str(ext_def.GUID)
                     }
+                    count+= 1
+            forms.alert(
+                msg="Successfully hid {} parameters".format(count),
+                warn_icon=False
+            )
             if value_dict:
                 entity = es.Entity(schema)
                 field = schema.GetField("data")

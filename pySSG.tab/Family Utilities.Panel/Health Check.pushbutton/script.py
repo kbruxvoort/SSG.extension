@@ -1,13 +1,30 @@
+# -*- coding: utf-8 -*-
 import os
 import re
+import sys
 
-from System.Collections.Generic import List
 
 from pyrevit import revit, DB, script
 
-from parameters.shared import STANDARD_PARAMETERS
-from parameters.family import param_has_value, get_value, sort_parameter_into_group, PARAM_MAP
+from parameters import (
+    STANDARD_PARAMETERS,
+    PARAM_MAP,
+    param_has_value,
+    get_value,
+    sort_parameter_into_group
+)
+reload(sys)
+sys.setdefaultencoding('utf-8')
+# BAD_EMOJI = str(":cross_mark:")
+BAD_EMOJI = "BAD"
+# TACO_EMOJI = ":taco:"
+# TACO_EMOJI = "&#127790;"
+TACO_EMOJI = "\U0001F32E"
+# Print the taco emoji
+print(TACO_EMOJI.encode('utf-8'))  # Output: 🌮
 
+# GOOD_EMOJI = ":white_heavy_check_mark:"
+GOOD_EMOJI = "GOOD"
 
 def validate_string(pattern, input_string):
     regex = re.compile(pattern)
@@ -34,10 +51,10 @@ def validate_manufacturer_value(parameter_value):
 
 def score_emoji(score):
     if score == 1:
-        return taco_emoji
+        return TACO_EMOJI
     if score > .9:
-        return good_emoji
-    return bad_emoji
+        return GOOD_EMOJI
+    return BAD_EMOJI
 
 
 def test_family_name(family_document):
@@ -85,13 +102,17 @@ def test_nested_names(family_document):
     nested_names = [nf.Name for nf in nested_families if nf.FamilyCategory.CategoryType == DB.CategoryType.Model and nf.Name]
     count = 0
     comment_list = []
-    for nn in nested_names:
-        if validate_nested_name(nn):
-            count += 1
-        else:
-            comment_list.append(nn)
-    score = float(count)/len(nested_names)
-    comments = "<br>".join(comment_list)
+    if nested_names:
+        for nn in nested_names:
+            if validate_nested_name(nn):
+                count += 1
+            else:
+                comment_list.append(nn)
+        score = float(count)/len(nested_names)
+        comments = "<br>".join(comment_list)
+    else:
+        score = 1.0
+        comments = "No nested families found"
     return (float(score), comments)
         
     
@@ -312,7 +333,6 @@ def run_tests(family_document):
     for group, name, test_func in tests:
         result, comments = test_func(family_document)
         emoji = score_emoji(result)
-        # score = "{:.0%}".format(result)
         results.append((group, name, comments, result, emoji))
     total_score = score_average([r[3] for r in results])
     total = ["Total", "", "", total_score, score_emoji(total_score)]
@@ -347,19 +367,13 @@ def create_health_chart(test_table):
         set = chart.data.new_dataset('Health Score')
         set.data = data
         set.set_color(39, 149, 192, .5)
-        # chart.randomize_colors()
         chart.draw()
-    
-    
-    
-    
-bad_emoji = ':cross_mark:'
-taco_emoji = ':taco:'
-good_emoji = ':white_heavy_check_mark:'
 
 
 output = script.get_output()
 output.resize(900, 900)
+# output.set_font(font_family="Segoe UI Emoji", font_size=16)
+output.set_font(font_family="Arial", font_size=16)
 
 
 tests = [
@@ -384,22 +398,8 @@ create_health_chart(table[:-1])
 columns = ['Group', 'Item', 'Issues', 'Score', 'emoji']
 
 output.print_table(
-    # title=revit.doc.Title + " Health Check",
     table_data=table,
-    # title="Parameter Map",
     columns=columns,
     formats=['', '', '', '<strong>{:.0%}', ''],
     last_line_style='font-size: 16px; font-weight: 700'
 )
-
-
-
-'''
-# chart = output.make_radar_chart()
-# chart.data.labels = ["File Size", "Naming", "Reference Planes", "Standard Parameters", "Family Category"]
-# set = chart.data.new_dataset('Health Score')
-# set.data = [85, 100 , 62, 100, 25]
-# chart.randomize_colors()
-# chart.draw()
-'''
-# print(" ".join([good_emoji, bad_emoji, taco_emoji]))
