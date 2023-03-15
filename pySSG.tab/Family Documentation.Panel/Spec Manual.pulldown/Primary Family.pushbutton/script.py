@@ -90,7 +90,7 @@ if source_elements:
     names_3d = []
     all_3d = DB.FilteredElementCollector(revit.doc).OfClass(DB.View3D).ToElements()
     for v in all_3d:
-        names_3d.append(v.ViewName)
+        names_3d.append(v.Name)
 
     # Get the view templates required
     primary_template = []
@@ -98,7 +98,7 @@ if source_elements:
     all_views = DB.FilteredElementCollector(revit.doc).OfClass(DB.View).ToElements()
     for view in all_views:
         if view.IsTemplate:
-            if view.ViewName == "SSG_3D - PDF Primary":
+            if view.Name == "SSG_3D - PDF Primary":
                 primary_template.append(view)
 
     # Filtering for current sheets to get highest sheet number
@@ -129,7 +129,7 @@ if source_elements:
     schedule_names = []
     for s in all_schedules:
         schedule_names.append(s.Name)
-        if "SPEC" in s.ViewName:
+        if "SPEC" in s.Name:
             spec_schedules.append(s)
 
     ref_def = spec_schedules[0].Definition
@@ -229,7 +229,7 @@ if source_elements:
                                 DB.ViewDuplicateOption.Duplicate
                             )
                             sched_2 = revit.doc.GetElement(new_sched_id)
-                            sched_2.ViewName = name_2
+                            sched_2.Name = name_2
                             tgt_filter = DB.ScheduleFilter(
                                 fields[0], ref_filt.FilterType, name_2
                             )
@@ -271,7 +271,7 @@ if source_elements:
                 # Check if the 3d exists but isn't on the sheet
                 if not viewports:
                     if ele_name in names_3d:
-                        view_3d = [v for v in all_3d if v.ViewName == ele_name][0]
+                        view_3d = [v for v in all_3d if v.Name == ele_name][0]
                         print("\t3D view already exists. Placing view on sheet 1")
                     else:
                         # Create New 3D View w/ Section Box
@@ -309,7 +309,7 @@ if source_elements:
                             DB.ViewDuplicateOption.Duplicate
                         )
                         sched_1 = revit.doc.GetElement(new_sched_id)
-                        sched_1.ViewName = name_1
+                        sched_1.Name = name_1
                         tgt_filter = DB.ScheduleFilter(
                             fields[0], ref_filt.FilterType, name_1
                         )

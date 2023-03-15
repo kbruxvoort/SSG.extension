@@ -1,0 +1,10 @@
+# bundle title
+title: "Family\nPublish"
+
+# bundle tooltip
+tooltip: This script exports a family and its parameters to the admin database.
+
+# bundle author
+author: Kyle Bruxvoort
+
+context: doc-family

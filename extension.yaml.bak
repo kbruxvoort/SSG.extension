@@ -1,0 +1,13 @@
+# UI Extensions
+type: extension
+rocket_mode_compatible: true
+
+name: pySSG
+description: IronPython Scripts for Autodesk Revit
+# author: Kyle Bruxvoort
+author_profile: https://kbrux.com
+website: https://github.com/kbruxvoort/SSG.extension.git
+image: ""
+templates:
+  - youtube: https://www.youtube.com/watch?v=
+  - author: Kyle Bruxvoort

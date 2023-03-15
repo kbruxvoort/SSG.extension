@@ -1,0 +1,12 @@
+layout:
+  - Shared Wrapper
+  - FormulaSync
+  - ScheduleByRoom
+  # - Pricing Viz
+  # - Iupdater
+  # - CaseworkByLine
+  # - test
+  # - wpf
+  # - CopyLinkedRooms
+  # - ExtensibleFilter
+  # - ExtensibleStorage

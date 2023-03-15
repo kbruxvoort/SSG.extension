@@ -1,106 +1,65 @@
-from pyrevit import revit, DB, UI
-from pyrevit import script
+from System.Collections.Generic import List
+from pyrevit import revit, DB
 
-from Autodesk.Revit.Exceptions import ArgumentException, InvalidOperationException
 
-logger = script.get_logger()
+from Autodesk.Revit.Exceptions import ArgumentException
 
-col = DB.FilteredElementCollector(revit.doc).OfClass(DB.ReferencePlane).ToElements()
+ref_styles = {
+    "pySSG_strong": {"color": DB.Color(127, 46, 45), "pattern": (1, .125/12)},
+    "pySSG_weak": {"color": DB.Color(208, 75, 74), "pattern": (.5/12, .125/12)},
+    "pySSG_not_ref": {"color": DB.Color(250, 237, 237), "pattern": (.25/12, .125/12)}
+}
 
-named_ref, weak_ref, not_ref = [], [], []
-
-with revit.Transaction("Create Subcategory"):
-    ref_plane_cat = col[0].Category
-
-    subCats = ref_plane_cat.SubCategories
-
-    subNames = []
-    if subCats:
-        for sub in subCats:
-            if sub.Name == "Named References":
-                named_subcat_id = sub.Id
-            elif sub.Name == "Weak References":
-                weak_subcat_id = sub.Id
-            elif sub.Name == "Not References":
-                not_subcat_id = sub.Id
-            subNames.append(sub.Name)
-
-    try:
-        if "Named References" not in subNames:
-            named_subcat = revit.doc.Settings.Categories.NewSubcategory(
-                ref_plane_cat, "Named References"
-            )
-            named_subcat.LineColor = DB.Color(128, 0, 255)
-            named_subcat.SetLinePatternId(
-                ref_plane_cat.GetLinePatternId(DB.GraphicsStyleType.Projection),
-                DB.GraphicsStyleType.Projection,
-            )
-            named_subcat_id = named_subcat.Id
-        if "Weak References" not in subNames:
-            weak_subcat = revit.doc.Settings.Categories.NewSubcategory(
-                ref_plane_cat, "Weak References"
-            )
-            weak_subcat.LineColor = DB.Color(255, 0, 128)
-            # weak_subcat.SetLineWeight(5, DB.GraphicsStyleType.Projection)
-            weak_subcat.SetLinePatternId(
-                ref_plane_cat.GetLinePatternId(DB.GraphicsStyleType.Projection),
-                DB.GraphicsStyleType.Projection,
-            )
-            weak_subcat_id = weak_subcat.Id
-        if "Not References" not in subNames:
-            not_subcat = revit.doc.Settings.Categories.NewSubcategory(
-                ref_plane_cat, "Not References"
-            )
-            not_subcat.LineColor = DB.Color(225, 225, 255)
-            not_subcat.SetLinePatternId(
-                ref_plane_cat.GetLinePatternId(DB.GraphicsStyleType.Projection),
-                DB.GraphicsStyleType.Projection,
-            )
-            not_subcat_id = not_subcat.Id
-
-        for c in col:
-
-            if (
-                c.get_Parameter(
-                    DB.BuiltInParameter.ELEM_REFERENCE_NAME_2D_XZ
-                ).AsValueString()
-                == "Not a Reference"
-            ):
-                not_ref.append(c)
-
-            elif (
-                c.get_Parameter(
-                    DB.BuiltInParameter.ELEM_REFERENCE_NAME_2D_XZ
-                ).AsValueString()
-                == "Weak Reference"
-            ):
-                weak_ref.append(c)
-
+references = DB.FilteredElementCollector(revit.doc).OfClass(DB.ReferencePlane).ToElements()
+if references:
+    ref_cat = references[0].Category
+    ref_subcats = ref_cat.SubCategories
+    line_pattern_elements = DB.FilteredElementCollector(revit.doc).OfClass(DB.LinePatternElement).ToElements()
+    
+    
+    with revit.Transaction("Check References"):
+        # create line patterns
+        pattern_dict = {}
+        for k,v in ref_styles.items():
+            pat_elem = DB.LinePatternElement.GetLinePatternElementByName(revit.doc, k)
+            segments = List[DB.LinePatternSegment]()
+            segments.Add(DB.LinePatternSegment(DB.LinePatternSegmentType.Dash, v["pattern"][0]))
+            segments.Add(DB.LinePatternSegment(DB.LinePatternSegmentType.Space, v["pattern"][1]))
+            
+            if pat_elem:
+                pattern = pat_elem.GetLinePattern()
+                pattern.SetSegments(segments)
+                pat_elem.SetLinePattern(pattern)
             else:
-                named_ref.append(c)
+                pattern = DB.LinePattern(k)
+                pattern.SetSegments(segments)
+                try:
+                    pat_elem = DB.LinePatternElement.Create(revit.doc, pattern)
+                except ArgumentException as ae:
+                    print("Unable to create line pattern: {}".format(ae))
+                    raise NameError
+            if pat_elem:
+                subcat_list = [sc for sc in ref_subcats if sc.Name == k]
+                if subcat_list:
+                    subcat = subcat_list[0]
+                else:
+                    subcat = revit.doc.Settings.Categories.NewSubcategory(ref_cat, k)
+                subcat.LineColor = v["color"]
+                subcat.SetLinePatternId(
+                    pat_elem.Id,
+                    DB.GraphicsStyleType.Projection,
+                )
+                ref_styles[k]["subcategory"] = subcat.Id
+                
+        for ref in references:
+            ref_subcat_param = ref.get_Parameter(DB.BuiltInParameter.CLINE_SUBCATEGORY)
+            is_ref = ref.get_Parameter(DB.BuiltInParameter.ELEM_REFERENCE_NAME)
 
-        print("%s: Named References" % str(len(named_ref)))
-        print("%s: Not References" % str(len(not_ref)))
-
-        if named_ref:
-            for r in named_ref:
-                param = r.get_Parameter(DB.BuiltInParameter.CLINE_SUBCATEGORY)
-                param.Set(named_subcat_id)
-
-        if weak_ref:
-            message = "%s: Weak References" % str(len(weak_ref))
-            print(logger.warning(message))
-            for r in weak_ref:
-                param = r.get_Parameter(DB.BuiltInParameter.CLINE_SUBCATEGORY)
-                param.Set(weak_subcat_id)
-        else:
-            message = "Good job removing all those weak references"
-            print(logger.success(message))
-
-        if not_ref:
-            for r in not_ref:
-                param = r.get_Parameter(DB.BuiltInParameter.CLINE_SUBCATEGORY)
-                param.Set(not_subcat_id)
-
-    except InvalidOperationException:
-        print("Subcategory Name already Exists")
+            if is_ref.AsInteger() < 9 or is_ref.AsInteger() == 13:
+                ref_subcat_param.Set(ref_styles["pySSG_strong"]["subcategory"])
+            elif is_ref.AsInteger() == 14:
+                ref_subcat_param.Set(ref_styles["pySSG_weak"]["subcategory"])
+            elif is_ref.AsInteger() == 12:
+                ref_subcat_param.Set(ref_styles["pySSG_not_ref"]["subcategory"])
+                
+        revit.active_view.HideCategoryTemporary(DB.ElementId(DB.BuiltInCategory.OST_Dimensions.GetHashCode()))

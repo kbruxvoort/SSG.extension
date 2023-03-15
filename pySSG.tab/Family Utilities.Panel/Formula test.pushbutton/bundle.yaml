@@ -1,0 +1,14 @@
+# bundle title
+# title: "Formula Test"
+
+# bundle tooltip
+tooltip: This script sets a formula from the project.
+
+# bundle author
+author: Kyle Bruxvoort
+
+# highlight: updated
+
+context:
+  # - active-3d-view
+  - doc-project

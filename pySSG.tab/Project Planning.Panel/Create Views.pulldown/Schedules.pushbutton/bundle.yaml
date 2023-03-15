@@ -1,0 +1,5 @@
+tooltip: This script creates individual equipment schedules filtered by selected room. 
+title: Equipment schedule by room
+author: '{{author}}'
+context:
+  - doc-project

@@ -18,7 +18,7 @@ forms.inform_wip()
 #     if not c.IsTemplate and "SSG" in c.Name:
 #         w, l = get_rectangle(c)
 #         mat_views.append(c)
-#         # print((c.ViewName, w*12, l*12))
+#         # print((c.Name, w*12, l*12))
 
 # selection = revit.get_selection()
 # for s in selection:

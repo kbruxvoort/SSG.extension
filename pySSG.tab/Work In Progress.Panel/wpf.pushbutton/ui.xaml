@@ -1,0 +1,48 @@
+<Window     
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Good Question"
+    Height="580" Width="350"
+    WindowStartupLocation="CenterScreen"
+    HorizontalAlignment="Center"
+    ShowInTaskbar="True"
+    ResizeMode="CanResizeWithGrip">
+    <!-- Background="{StaticResource neutral-50}"> -->
+    <StackPanel Margin="16">
+        <TextBlock Text="Colors:" TextWrapping="Wrap" Margin="0,0,0,16"/>
+        <ListBox x:Name="lbColor" Margin="0,0,0,8">
+            <ListBoxItem Content="Blue"/>
+            <ListBoxItem Content="Green"/>
+            <ListBoxItem Content="Yellow"/>
+            <ListBoxItem Content="Red"/>
+            <ListBoxItem Content="Purple"/>
+            <ListBoxItem Content="Orange"/>
+        </ListBox>
+        <TextBlock Text="Your selected color:" TextWrapping="Wrap" Margin="0,0,0,8"/>
+        <TextBlock Text="{Binding ElementName=lbColor, Path=SelectedItem.Content}"
+                   Background="{Binding ElementName=lbColor, Path=SelectedItem.Content}"
+                   Padding="16"
+                   HorizontalAlignment="Left"
+                   VerticalAlignment="Center"/>
+        <Label Content="Enter Your Name"/>
+        <TextBox x:Name="my_name" Height="30"/>
+        <TextBlock Text="{Binding ElementName=my_name, Path=Text, StringFormat=Hello {0}}"/>
+        <!-- <TextBlock Text="String.Format("Hello {0}!", "{Binding ElementName=my_name, Path=Text}")"/> -->
+        <Button Height="36" FontSize="16" FontWeight="Medium" Click="say_hello">Say Hello</Button>
+    </StackPanel>
+    <!-- <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="24"/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition/>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
+        <Grid Background="{StaticResource neutral-500}"
+              Grid.ColumnSpan="2"></Grid>
+    </Grid> -->
+</Window>

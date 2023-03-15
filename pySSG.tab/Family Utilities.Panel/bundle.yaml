@@ -1,3 +1,5 @@
 layout:
   - Reference
   - Export Current View
+  # - Formula test
+  - Health Check

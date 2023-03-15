@@ -1,6 +1,10 @@
+from System import Guid
+
 from pyrevit import revit, DB
 from Autodesk.Revit.Exceptions import ArgumentException, InvalidOperationException
 
+
+HIDDEN_SCHEMA_GUID = Guid("f5f3b8c9-715b-40e3-a085-c5c3824d36f1")
 
 STANDARD_PARAMETERS = {
     "STD_Widths": DB.BuiltInParameterGroup.PG_CONSTRAINTS,
@@ -43,13 +47,13 @@ def get_shared_param_by_name(name):
     app = revit.doc.Application
     shared_parameters_file = app.OpenSharedParameterFile()
     shared_groups = shared_parameters_file.Groups
-    params = []
+    # params = []
     for group in shared_groups:
         for p in group.Definitions:
             if p.Name == name:
-                params.append(p)
-    if len(params) > 0:
-        return params[0]
+                return p
+    # if len(params) > 0:
+    #     return params[0]
 
 
 def get_all_shared_names():

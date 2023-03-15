@@ -1,3 +1,5 @@
 layout:
+  - DataMerge
   - Family Publish
   - Model Group Publish
+  # - shift click
