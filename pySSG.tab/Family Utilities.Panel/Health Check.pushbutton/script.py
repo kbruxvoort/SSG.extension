@@ -1,7 +1,5 @@
-# -*- coding: utf-8 -*-
 import os
 import re
-import sys
 
 
 from pyrevit import revit, DB, script
@@ -13,16 +11,11 @@ from parameters import (
     get_value,
     sort_parameter_into_group
 )
-reload(sys)
-sys.setdefaultencoding('utf-8')
-# BAD_EMOJI = str(":cross_mark:")
+
+# BAD_EMOJI = ":cross_mark:"
 BAD_EMOJI = "BAD"
 # TACO_EMOJI = ":taco:"
-# TACO_EMOJI = "&#127790;"
-TACO_EMOJI = "\U0001F32E"
-# Print the taco emoji
-print(TACO_EMOJI.encode('utf-8'))  # Output: 🌮
-
+TACO_EMOJI = "TACO"
 # GOOD_EMOJI = ":white_heavy_check_mark:"
 GOOD_EMOJI = "GOOD"
 
@@ -373,7 +366,6 @@ def create_health_chart(test_table):
 output = script.get_output()
 output.resize(900, 900)
 # output.set_font(font_family="Segoe UI Emoji", font_size=16)
-output.set_font(font_family="Arial", font_size=16)
 
 
 tests = [
