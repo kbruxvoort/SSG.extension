@@ -1,0 +1,487 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Name="window"
+        Title="Batch Add Shared Parameters" 
+        Width="1500"
+        MinWidth="1500"
+        Height="714"
+        MinHeight="714">
+
+    <Window.Resources>
+        <SolidColorBrush x:Key="blue-300" Color="#2795C0" />
+        <!-- Base Button Style -->
+        <Style TargetType="Button">
+            <Style.Resources>
+                <Style TargetType="Border">
+                    <Setter Property="BorderThickness" Value="0"/>
+                    <Setter Property="CornerRadius" Value="4"/>
+                </Style>
+            </Style.Resources>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="#f6f7f8"/>
+            <Setter Property="Foreground" Value="#161f27"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+
+        <!-- Primary Button Style -->
+        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}"  x:Key="Primary">
+            <Setter Property="Background" Value="{StaticResource blue-300}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="#161f27" Opacity=".25" BlurRadius="4" ShadowDepth="2   "/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <!-- Outline Button Style -->
+        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}" x:Key="Outline">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#2795C0"/>
+            <Setter Property="BorderBrush" Value="#2795C0"/>
+            <Setter Property="BorderThickness" Value="2"/>
+        </Style>
+        
+        <!-- TextBox Style -->
+        <Style TargetType="TextBox" x:Key="Standard">
+            <Style.Resources>
+                <Style TargetType="Border">
+                    <Setter Property="CornerRadius" Value="4"/>
+                </Style>
+            </Style.Resources>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#161f27"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Padding" Value="2"/>
+            <Setter Property="BorderBrush" Value="#ebedef"/>
+            <Setter Property="BorderThickness" Value="2"/>
+        </Style>
+        
+        <!-- Label Style -->
+        <Style TargetType="Label">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#34495e"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+        </Style>
+
+        <!-- Combobox Style -->
+        <ControlTemplate x:Key="ComboBoxToggleButton" TargetType="{x:Type ToggleButton}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="20" />
+                </Grid.ColumnDefinitions>
+                <Border
+                  x:Name="Border" 
+                  Grid.ColumnSpan="2"
+                  CornerRadius="4"
+                  Background="#ebedef"
+                  BorderBrush="#c0c7cd"
+                  BorderThickness="2" 
+                  Padding="{TemplateBinding Padding}"/>
+                    
+                <Border 
+                  Grid.Column="0"
+                  CornerRadius="4 0 0 4" 
+                  Margin="0" 
+                  Background="#ebedef" 
+                  BorderBrush="#c0c7cd"
+                  BorderThickness="2" 
+                  Padding="{TemplateBinding Padding}"/>
+                <Path 
+                  x:Name="Arrow"
+                  Grid.Column="1"     
+                  Fill="#c0c7cd"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  Data="M0,0 L0,2 L4,6 L8,2 L8,0 L4,4 z"
+                />
+            </Grid>
+        </ControlTemplate>
+
+        <ControlTemplate x:Key="ComboBoxTextBox" TargetType="{x:Type TextBox}">
+            <Border x:Name="PART_ContentHost" Focusable="False" Background="{TemplateBinding Background}" />
+        </ControlTemplate>
+
+        <Style x:Key="{x:Type ComboBox}" TargetType="{x:Type ComboBox}">
+            <Setter Property="SnapsToDevicePixels" Value="true"/>
+            <Setter Property="OverridesDefaultStyle" Value="true"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="ScrollViewer.CanContentScroll" Value="true"/>
+            <Setter Property="MinWidth" Value="120"/>
+            <Setter Property="MinHeight" Value="20"/>
+            <Setter Property="Foreground" Value="#161f27"/>
+            <Setter Property="Padding" Value="4 0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ComboBox}">
+                        <Grid>
+                            <ToggleButton 
+                            Name="ToggleButton" 
+                            Template="{StaticResource ComboBoxToggleButton}" 
+                            Grid.Column="2" 
+                            Focusable="false"
+                            IsChecked="{Binding Path=IsDropDownOpen,Mode=TwoWay,RelativeSource={RelativeSource TemplatedParent}}"
+                            ClickMode="Press">
+                            </ToggleButton>
+                            <ContentPresenter Name="ContentSite" IsHitTestVisible="False"  Content="{TemplateBinding SelectionBoxItem}"
+                            ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                            ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                            Margin="3,3,23,3"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Left" />
+                            <TextBox x:Name="PART_EditableTextBox"
+                                     Padding="{TemplateBinding Padding}"
+                            Style="{x:Null}" 
+                            Template="{StaticResource ComboBoxTextBox}" 
+                            HorizontalAlignment="Left" 
+                            VerticalAlignment="Center"
+                            Margin="3,3,23,3"
+                            Focusable="True" 
+                            Background="#FF3F3F3F"
+                            Foreground="Green"
+                            Visibility="Hidden"
+                            IsReadOnly="{TemplateBinding IsReadOnly}"/>
+                            <Popup 
+                            Name="Popup"
+                            Placement="Bottom"
+                            IsOpen="{TemplateBinding IsDropDownOpen}"
+                            AllowsTransparency="True" 
+                            Focusable="False"
+                            PopupAnimation="Slide">
+
+                                <Grid Name="DropDown"
+                              SnapsToDevicePixels="True" 
+                                      
+                              MinWidth="{TemplateBinding ActualWidth}"
+                              MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <Border 
+                                x:Name="DropDownBorder"
+                                Background="#ebedef"
+
+                                BorderThickness="1"
+                                BorderBrush="#c0c7cd"/>
+                                    <ScrollViewer Margin="4,6,4,6" SnapsToDevicePixels="True">
+                                        <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained" />
+                                    </ScrollViewer>
+                                </Grid>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="HasItems" Value="false">
+                                <Setter TargetName="DropDownBorder" Property="MinHeight" Value="95"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="false">
+                                <Setter Property="Foreground" Value="#888888"/>
+                            </Trigger>
+                            <Trigger Property="IsGrouping" Value="true">
+                                <Setter Property="ScrollViewer.CanContentScroll" Value="false"/>
+                            </Trigger>
+                            <Trigger SourceName="Popup" Property="Popup.AllowsTransparency" Value="true">
+                                <Setter TargetName="DropDownBorder" Property="CornerRadius" Value="0"/>
+                                <Setter TargetName="DropDownBorder" Property="Margin" Value="0,2,0,0"/>
+                            </Trigger>
+                            <Trigger Property="IsEditable"  Value="true">
+                                <Setter Property="IsTabStop" Value="false"/>
+                                <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="ContentSite" Property="Visibility" Value="Hidden"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+            </Style.Triggers>
+        </Style>
+
+        <!-- SimpleStyles: ComboBoxItem -->
+        <Style x:Key="{x:Type ComboBoxItem}" TargetType="{x:Type ComboBoxItem}">
+            <Setter Property="SnapsToDevicePixels" Value="true"/>
+            <Setter Property="Foreground" Value="#161f27"/>
+            <Setter Property="OverridesDefaultStyle" Value="true"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ComboBoxItem}">
+                        <Border Name="Border"
+                                Padding="{TemplateBinding Padding}"
+                              SnapsToDevicePixels="true">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="true">
+                                <Setter TargetName="Border" Property="Background" Value="#2795c0"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="false">
+                                <Setter Property="Foreground" Value="blue"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- DataGrid Header Style-->
+        <Style TargetType="{x:Type DataGridColumnHeader}">
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Height" Value="35" />
+            <Setter Property="SeparatorBrush" Value="#f6f7f8" />
+            <Setter Property="FontWeight" Value="Medium" />
+            <Setter Property="Foreground" Value="#778593" />
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderThickness" Value="0 0 0 2"/>
+            <Setter Property="BorderBrush" Value="#778593"/>
+            <Setter Property="Padding" Value="2 0"/>
+        </Style>
+        
+        <!-- DataGrid Style-->
+        <Style TargetType="{x:Type DataGrid}">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="AlternatingRowBackground" Value="#ebedef"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#c0c7cd"/>
+            <Setter Property="BorderBrush" Value="#f6f7f8"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            
+            
+        </Style>
+        <!-- DataGrid Row Style-->
+        <Style TargetType="{x:Type DataGridRow}">
+            <Setter Property="Foreground" Value="#161f27"/>
+            <Setter Property="Height" Value="25"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style x:Key="ExistingParameterStyle" TargetType="{x:Type DataGridRow}">
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsExisting}" Value="True">
+                    <Setter Property="Background" Value="#C0C7CD" />
+                    <Setter Property="Foreground" Value="#778593" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="16">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*"/>
+            <ColumnDefinition Width="100"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="64"/>
+            <RowDefinition Height="10"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="10"/>
+            <RowDefinition Height="60"/>
+        </Grid.RowDefinitions>
+
+        <!-- First column -->
+
+        <Grid Grid.Column="0" Grid.Row="0" HorizontalAlignment="Stretch">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="10"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="1.25*"/>
+            </Grid.RowDefinitions>
+            <!-- Filter box -->
+
+
+            <Label Content="Search Name"
+                    DockPanel.Dock="Top"
+                    Grid.Column="0"
+                    Grid.Row="0"
+                    Height="24"/>
+
+            <TextBox x:Name="filterBox"
+                     Style="{StaticResource Standard}"
+                    DockPanel.Dock="Bottom" 
+                    HorizontalAlignment="Stretch"
+                    VerticalContentAlignment="Center"
+                    TextChanged="filter_items"
+                    Padding="4"
+                    FontSize="14"
+                    Grid.Column="0"
+                    Grid.Row="1"/>
+
+
+
+
+            <Label Content="Type Filter" Grid.Column="2" Grid.Row="0"/>
+                <!-- Parameter type filter -->
+
+
+            <Grid Grid.Column="2" Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="5"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <ComboBox x:Name="param_types"
+                          Padding="8"
+                          FontSize="14"
+                          FontWeight="Medium"
+                          VerticalContentAlignment="Center"
+                          HorizontalAlignment="Stretch"
+                          IsEditable="False"
+                          SelectedValue="{Binding parameter_type, NotifyOnSourceUpdated=True, UpdateSourceTrigger=PropertyChanged}"
+                          SelectionChanged="filter_items"
+                          Grid.Column="0"/>
+
+                <Button x:Name="clearFilterButton"
+                        Style="{StaticResource Outline}"
+                        Content="Clear Type Filter"
+                        Grid.Column="2"
+                        Padding="8 0"
+                        Click="filter_items"
+                        HorizontalContentAlignment="Center"/>
+            </Grid>
+
+
+        </Grid>
+
+
+
+
+
+
+
+
+
+
+        <!-- External definitions datagrid -->
+        <DataGrid x:Name="externalDefinitionsGrid"
+                      IsReadOnly="True" SelectionMode="Extended"
+                      AutoGenerateColumns="False" CanUserAddRows="False"
+                      Grid.Row="2">
+
+
+
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="NAME" Binding="{Binding name}" Width="Auto"/>
+                <DataGridTextColumn Header="GUID" Binding="{Binding guid}" Width="Auto"/>
+                <DataGridTextColumn Header="DEFINITION GROUP" Binding="{Binding definition_group}" Width="120"/>
+                <DataGridTextColumn Header="DESCRIPTION" Binding="{Binding description}" Width="*"/>
+                <DataGridCheckBoxColumn Header="MODIFIABLE" Binding="{Binding user_modifiable}" Width="80"/>
+                <DataGridCheckBoxColumn Header="VISIBLE" Binding="{Binding visible}" Width="60"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+
+
+        <!-- Second column -->
+        <StackPanel Grid.Column="1"
+                    Grid.RowSpan="3"
+                    VerticalAlignment="Center">
+
+            <!-- Move button -->
+            <Button x:Name="moveButton"
+                    Style="{StaticResource Primary}"
+                    Margin="8" 
+                    Content="&gt;&gt;" 
+                    Width="Auto" 
+                    Height="32"
+                    Click="add_definition"/>
+
+            <!-- Remove button -->
+            <Button x:Name="removeButton"
+                    Style="{StaticResource Primary}"
+                    Margin="8" 
+                    Content="&lt;&lt;" 
+                    Width="Auto" 
+                    Height="32"
+                    Click="remove_definition" />
+
+        </StackPanel>
+        <Grid Grid.Column="2" Grid.Row="0" HorizontalAlignment="Stretch">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="10"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="1.25*"/>
+            </Grid.RowDefinitions>
+            <!-- Load Existing Button -->
+            <Button Width="Auto"
+                    Style="{StaticResource Outline}"
+                    Content="Load Family Shared Parameters"
+                    Padding="8 0"
+                    Grid.Column="0"
+                    Grid.Row="1"
+                    Click="populate_selected"/>
+
+            <!-- Load Existing Button -->
+            <Button Width="Auto"
+                    Style="{StaticResource Outline}"
+                    Content="Add Standards"
+                    Grid.Column="3"
+                    Grid.Row="1"
+                    Click="populate_standard"/>
+        </Grid>
+
+            
+
+
+
+        <!-- Selected definitions datagrid -->
+        <DataGrid x:Name="selectedDefinitionsGrid"
+                      Grid.Column="2"
+                      Grid.Row="2"
+                      AutoGenerateColumns="False" CanUserAddRows="False"
+                      SelectionMode="Extended"
+                      RowStyle="{StaticResource ExistingParameterStyle}">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="NAME" Width="*" Binding="{Binding name}" IsReadOnly="True"/>
+                <DataGridTemplateColumn Header="PARAMETER GROUP" Width="*" SortMemberPath="parameter_group" >
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <ComboBox VerticalAlignment="Center" 
+                                          HorizontalAlignment="Stretch"
+                                          IsEditable="False"
+                                          ItemsSource="{Binding parameter_groups, ElementName=window}"
+                                          SelectedValue="{Binding parameter_group, NotifyOnSourceUpdated=True, UpdateSourceTrigger=PropertyChanged}"
+                                          SelectedValuePath="name"
+                                          SourceUpdated="target_updated" />
+                            </Grid>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="INSTANCE" SortMemberPath="is_instance" Width="60">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <CheckBox IsChecked="{Binding is_instance, NotifyOnSourceUpdated=True,UpdateSourceTrigger=PropertyChanged}" 
+                                      SourceUpdated="target_updated"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+
+        <!-- Add button -->
+        <Button x:Name="addButton"
+                Style="{StaticResource Primary}"
+                Content="Apply Parameter Changes" 
+                HorizontalAlignment="Stretch"
+                Grid.ColumnSpan="3"
+                Grid.Row="5"
+                FontSize="18"
+                Click="button_clicked" />
+
+    </Grid>
+
+</Window>

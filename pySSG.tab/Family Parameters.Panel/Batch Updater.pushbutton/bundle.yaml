@@ -1,0 +1,5 @@
+title: "Batch Update"
+tooltip: This script allows you to quickly Add or Edit Shared Parameters in a Family.
+help_url: "https://www.notion.so/fetchbim/pySSG-dfb3f2c476e142f394d2bc1422162b2c"
+author: '{{author}}'
+context: doc-family
