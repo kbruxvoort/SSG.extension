@@ -22,7 +22,7 @@ def get_available_shared_parameter_name(param_type, excluded_names):
 def get_shared_parameter(parameter_name, parameter_type, shared_parameter_file):
     ext_df = shared_parameter_file.query(name=parameter_name, first_only=True)
     if not ext_df:
-        ext_df = sp.create_definition(
+        ext_df = shared_parameter_file.create_definition(
             group_name="pySSG Hidden", 
             name=parameter_name, 
             parameter_type=parameter_type, 
@@ -86,6 +86,11 @@ if definition_file:
                     group = sp.Definition.ParameterGroup
                     original_name = sp.Definition.Name
                     original_type = sp.Definition.ParameterType
+                    is_shared = sp.IsShared
+                    if is_shared:
+                        original_guid = sp.GUID
+                    else:
+                        original_guid = None
                     replaced_param = revit.doc.FamilyManager.ReplaceParameter(
                         sp, 
                         ext_def, 
@@ -97,7 +102,9 @@ if definition_file:
                         "ParameterGroup": str(group), 
                         "ParameterType": str(original_type),
                         "HiddenName": ext_def.Name, 
-                        "HiddenGuid": str(ext_def.GUID)
+                        "HiddenGuid": str(ext_def.GUID),
+                        "IsShared": is_shared,
+                        "SharedGuid": str(original_guid)
                     }
                     count+= 1
                     
