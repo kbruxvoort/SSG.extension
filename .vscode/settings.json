@@ -1,3 +1,13 @@
 {
-    "editor.formatOnSave": true
+    "editor.formatOnSave": true,
+    "python.autoComplete.extraPaths": [
+        "C:\\Users\\KyleBruxvoort\\AppData\\Roaming\\pyRevit-Master\\pyrevitlib\\",
+        "C:\\Users\\KyleBruxvoort\\AppData\\Roaming\\ironpython-stubs\\release\\stubs.min\\",
+        "C:\\Users\\KyleBruxvoort\\Extensions\\SSG.extension\\lib"
+    ]
+    "python.analysis.extraPaths": [
+        "C:\\Users\\KyleBruxvoort\\AppData\\Roaming\\pyRevit-Master\\pyrevitlib\\",
+        "C:\\Users\\KyleBruxvoort\\AppData\\Roaming\\ironpython-stubs\\release\\stubs.min\\",
+        "C:\\Users\\KyleBruxvoort\\Extensions\\SSG.extension\\lib"
+    ]
 }
