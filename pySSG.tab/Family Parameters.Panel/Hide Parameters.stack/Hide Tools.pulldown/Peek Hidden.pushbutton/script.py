@@ -14,7 +14,7 @@ if schema:
         value_string = entity.Get[str]("data")
         value_dict = json.loads(value_string)
         table = []
-        for k,v in value_dict.items():
+        for k,v in value_dict["map"].items():
             parameter_data = []
             parameter_data.append(k)
             parameter_data.append(v["HiddenName"])

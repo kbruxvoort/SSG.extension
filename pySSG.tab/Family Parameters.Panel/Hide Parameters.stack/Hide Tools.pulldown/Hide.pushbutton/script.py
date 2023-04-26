@@ -3,37 +3,52 @@ import json
 import Autodesk.Revit.DB.ExtensibleStorage as es
 
 from pyrevit import revit, script, forms, DB
-from extensible_storage import HIDDEN_SCHEMA_GUID
-from parameters import SharedParameterFile, extract_largest_index
+from extensible_storage import HIDDEN_SCHEMA_GUID, create_hidden_param_schema
+from parameters import (
+    SharedParameterFile, 
+    get_array_original_element_ids, 
+    param_associated_to_array,
+    save_param_order
+)
 
 
+def get_available_shared_parameter_name(param_type, excluded_names):
+    for i in range(100):
+        name = 'z{}{:02d}'.format(param_type.ToString(), i)
+        if name not in excluded_names:
+            return name
+    return None
 
-# output = script.get_output()
+def get_shared_parameter(parameter_name, parameter_type, shared_parameter_file):
+    ext_df = shared_parameter_file.query(name=parameter_name, first_only=True)
+    if not ext_df:
+        ext_df = sp.create_definition(
+            group_name="pySSG Hidden", 
+            name=parameter_name, 
+            parameter_type=parameter_type, 
+            description="Hidden {} type parameter".format(str(parameter_type)), 
+            guid=None, 
+            hide_no_value=False,
+            visible=False
+        )
+    return ext_df
 
-app = revit.doc.Application
 
 # make sure we can access shared parameters
 definition_file = SharedParameterFile()
-
 
 # make sure exstensible storage schema exists
 if definition_file:
     schema = es.Schema.Lookup(HIDDEN_SCHEMA_GUID)
     if not schema:
-        builder = es.SchemaBuilder(HIDDEN_SCHEMA_GUID)
-        builder.SetReadAccessLevel(es.AccessLevel.Public)
-        builder.SetWriteAccessLevel(es.AccessLevel.Public)
-        builder.SetVendorId("pySSG")
-        builder.SetSchemaName("HiddenParameters")
-        builder.SetDocumentation(
-            "This schema is used to map visible family parameters to a shared hidden parameter."
-        )
-        field_builder = builder.AddSimpleField("data", str)
-        schema = builder.Finish()
+        schema = create_hidden_param_schema()
     
     # check if there is an existing map
     entity = revit.doc.OwnerFamily.GetEntity(schema)
-    value_dict = {}
+    value_dict = {
+        "map": {},
+        "sort": {}
+    }
     if entity.IsValid():
         value_string = entity.Get[str]("data")
         value_dict = json.loads(value_string)
@@ -48,97 +63,58 @@ if definition_file:
     
     # group parameters to be swapped into group by type
     if selected_params:
-        unable_swap = []
-        type_dict = {}
-        
-        for sp in selected_params:
-            associated_group = False
-            # check if parameter is associated to group and can't be changed without ungrouping
-            if sp.AssociatedParameters:
-                for ap in sp.AssociatedParameters:
-                    if ap.Element.GroupId:
-                        associated_group = True
-                        unable_swap.append(sp)
-                        break
-            if not associated_group:            
-                if sp.Definition.ParameterType not in type_dict:
-                    type_dict[sp.Definition.ParameterType] = []
-                type_dict[sp.Definition.ParameterType].append(sp)
-        
         # list of hidden parameters already in family for comparison
         existing_hidden = [fp for fp in revit.doc.FamilyManager.Parameters if not fp.Definition.Visible]    
         existing_hidden_names = [fp.Definition.Name for fp in existing_hidden]
-
         
-        # get pySSG parameter group or create it if it doesn't exist
-        group_name = "pySSG Hidden"
-        def_group = definition_file.find_group_by_name(group_name)
-        # def_group = definition_file.Groups.get_Item(group_name)
-        if not def_group:
-            def_group = definition_file.create_group(group_name)
+        unable_swap = []
+        type_dict = {}
         
-        # group existing hidden parameters into group by type
-        ext_type_dict = {}
-        for ed in def_group.Definitions:
-            if not ed.Visible and ed.Name not in existing_hidden_names:
-                if ed.ParameterType not in ext_type_dict:
-                    ext_type_dict[ed.ParameterType] = []
-                ext_type_dict[ed.ParameterType].append(ed)
-                
-        # loop through our grouped parameters
+        array_element_ids = get_array_original_element_ids(revit.doc)
+        count = 0
+        value_dict["sort"] = save_param_order(revit.doc)
         with revit.Transaction("hide parameters"):
-            count = 0           
-            for k,v in type_dict.items():
-                # see if there are matching hidden parameters
-                try:
-                    sorted(ext_type_dict[k], key=lambda x: x.Name)
-                except KeyError:
-                    ext_type_dict[k] = []
-
-                max_num = extract_largest_index([d.Name for d in def_group.Definitions if d.ParameterType == k])
-                for param in v:
-                    # check if there are matching parameters. remove from list so we don't use it again.
-                    if len(ext_type_dict[k]) > 0:
-                        ext_def = ext_type_dict[k].pop()
-
-                    else:
-                        # Create new parameter in pySSG group if not enough exist.
-                        existing_params = [d.Name for d in def_group.Definitions if d.ParameterType == k]
-                        new_name = "z" + str(k) + format(max_num + 1, '02d')
-                        description = "Hidden {} type parameter".format(k)
-                        ext_def = definition_file.create_definition(
-                            group_name="pySSG Hidden",
-                            name=new_name,
-                            parameter_type=k,
-                            description=description,
-                            visible=False
-                        )
-                        max_num += 1
-                        
-                    group = param.Definition.ParameterGroup
-                    original_name = param.Definition.Name
+            for sp in selected_params:
+                
+                # skip parameters that can't be changed because they are in an array
+                associated_array = param_associated_to_array(sp, array_element_ids)
+                if associated_array:
+                    unable_swap.append(sp)
+                else:
+                    name = get_available_shared_parameter_name(sp.Definition.ParameterType, existing_hidden_names)
+                    ext_def = get_shared_parameter(name, sp.Definition.ParameterType, definition_file)
+                    group = sp.Definition.ParameterGroup
+                    original_name = sp.Definition.Name
+                    original_type = sp.Definition.ParameterType
                     replaced_param = revit.doc.FamilyManager.ReplaceParameter(
-                        param, 
+                        sp, 
                         ext_def, 
                         DB.BuiltInParameterGroup.INVALID, 
-                        param.IsInstance
+                        sp.IsInstance
                     )
-                    value_dict[original_name] = {
+                    existing_hidden_names.append(name)
+                    value_dict["map"][original_name] = {
                         "ParameterGroup": str(group), 
-                        "ParameterType": str(k),
+                        "ParameterType": str(original_type),
                         "HiddenName": ext_def.Name, 
                         "HiddenGuid": str(ext_def.GUID)
                     }
                     count+= 1
+                    
+            # successful count
             forms.alert(
-                msg="Successfully hid {} parameters".format(count),
-                warn_icon=False
-            )
+                    msg="Successfully hid {} parameters".format(count),
+                    warn_icon=False
+                )
+            
+            # set extensible storage
             if value_dict:
                 entity = es.Entity(schema)
                 field = schema.GetField("data")
                 entity.Set(field, json.dumps(value_dict))
                 revit.doc.OwnerFamily.SetEntity(entity)
+            
+            # alert about unswappable parameters    
             if unable_swap:
                 forms.alert(
                     "Unable to replace the following parameters because they are associated to groups: \n\n{}".format("\n".join([p.Definition.Name for p in unable_swap])),
@@ -146,3 +122,8 @@ if definition_file:
                     sub_msg="Disassociate the parameters, use 'Hide' to replace with hidden, and then manually reassociate.",
                     cancel=True
                     )
+
+                        
+                    
+                    
+            
