@@ -86,7 +86,7 @@ def get_param_id(family_document):
     current_type = family_document.FamilyManager.CurrentType
     param = family_document.FamilyManager.get_Parameter(Guid("cd2bd688-6eb7-4586-ba8c-148a0d1c845c"))
     if param:
-        fam_id = get_value(current_type, param)
+        fam_id = get_value(param, current_type)
         if is_guid(fam_id):
             return fam_id
     
