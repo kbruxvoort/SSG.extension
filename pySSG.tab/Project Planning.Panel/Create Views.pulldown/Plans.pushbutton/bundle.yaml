@@ -1,6 +1,5 @@
-tooltip: This script creates individual floor plans for each room in the active view. The active view must be a floor plan.
-title: Room Floor Plans by Active Plan View
+tooltip: This script creates individual floor plans for each selected room.
+title: Floor plans by room
 author: Kyle Bruxvoort
 context:
   - doc-project
-  - active-plan-view

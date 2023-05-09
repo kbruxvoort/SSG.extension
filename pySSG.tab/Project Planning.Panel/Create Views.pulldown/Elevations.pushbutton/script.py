@@ -1,144 +1,146 @@
-# pylint: disable=import-error,invalid-name,broad-except
 import math
 
-from pyrevit import revit, DB
-from pyrevit import script
-from pyrevit import forms
-
+from pyrevit import revit, DB, script, forms
+from rooms import select_placed_rooms, get_number, get_name
 from Autodesk.Revit import Exceptions
 
 
-class RoomOption(forms.TemplateListItem):
-    # def __init__(self, room_element):
-    #     super(RoomOption, self).__init__(room_element)
 
-    @property
-    def name(self):
-        """Room name."""
-        return "%s" % revit.query.get_name(self.item)
-
-
-def checkCurves(curve1, curve2):
+def check_combined_curves(curve1, curve2):
     v1 = curve1.Direction.Normalize()
     v2 = curve2.Direction.Normalize()
     if v1.IsAlmostEqualTo(v2):
         return DB.Line.CreateBound(curve2.GetEndPoint(0), curve1.GetEndPoint(1))
     else:
         return curve1
+    
+def get_curves_from_boundary(boundary_segments):
+    potential_curves, curve_list = [], []
+    for segment_list in boundary_segments:
+        for i, segment in enumerate(segment_list):
+            segment_curve = segment.GetCurve()
+            
+            # add first curve
+            if i == 0:
+                potential_curves.append(segment_curve)
+                
+            # check if next curves should be combined
+            else:
+                new_curve = check_combined_curves(
+                    segment_curve, potential_curves[len(potential_curves) - 1]
+                )
+                if new_curve == segment_curve:
+                    potential_curves.append(segment_curve)
+                # replace previous curve with combined curve
+                else:
+                    potential_curves[len(potential_curves) - 1] = new_curve
+    for curve in potential_curves:
+        if curve.Length >= OFFSET:
+            curve_list.append(curve)
+        
+    return curve_list
 
 
 def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
     return abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
 
-logger = script.get_logger()
-output = script.get_output()
+def get_direction(degrees):
+    if 337.5 <= degrees <= 360 or 0 <= degrees < 22.5:
+        return 'West'
+    elif 22.5 <= degrees < 67.5:
+        return 'Northwest'
+    elif 67.5 <= degrees < 112.5:
+        return 'North'
+    elif 112.5 <= degrees < 157.5:
+        return 'Northeast'
+    elif 157.5 <= degrees < 202.5:
+        return 'East'
+    elif 202.5 <= degrees < 247.5:
+        return 'Southeast'
+    elif 247.5 <= degrees < 292.5:
+        return 'South'
+    elif 292.5 <= degrees < 337.5:
+        return 'Southwest'
+    else:
+        return 'Invalid degrees value'
+    
+def get_unique_elevation_name(degrees, current_view_names):
+    direction_name = get_direction(degrees)
+    elevation_name = "Elevation - {} - {} - {}".format(get_number(room), get_name(room), direction_name)
 
-OFFSET = 6.25
+    # Check if the elevation name already exists
+    count = 1
+    while elevation_name in current_view_names:
+        elevation_name = " {} ({})".format(elevation_name, count)
+        count += 1
+
+    return elevation_name
+
+OFFSET = 7.0
+
+elevation_type_id = revit.doc.GetDefaultElementTypeId(
+    DB.ElementTypeGroup.ViewTypeElevation
+)
+
+view_names = []
+elevation_views = DB.FilteredElementCollector(revit.doc).OfClass(DB.ViewSection).ToElements()
+for view in elevation_views:
+    if view.IsTemplate == False:
+        view_names.append(view.Name)
 
 
-# rooms, elems, names = [], [], []
+rooms = select_placed_rooms(revit.doc, active_view_only=True)
 
-categories = [DB.BuiltInCategory.OST_Rooms]
-rooms = [x for x in revit.query.get_elements_by_categories(categories) if x.Area > 0]
 
 if rooms:
 
-    type_name = "Interior Elevation"
-    view_types = [
-        x
-        for x in revit.query.get_types_by_class(DB.ViewFamilyType)
-        if revit.query.get_name(x) == type_name
-    ]
-    if not view_types:
-        view_types = [revit.doc.GetElement(revit.doc.GetDefaultElementTypeId(DB.ElementTypeGroup.ViewTypeElevation))]
-    view_names = [
-        revit.query.get_name(x) for x in revit.query.get_elements_by_class(DB.View)
-    ]
-    # print(view_names)
 
-    if view_types:
+    max_value = len(rooms)
+    boundary_options = DB.SpatialElementBoundaryOptions()
+    
+    for room in rooms:
 
-        selected = forms.SelectFromList.show(
-            sorted([RoomOption(x) for x in rooms], key=lambda x: x.Number),
-            multiselect=True,
-            # name_attr= 'Number',
-            button_name="Select Rooms",
-        )
+        height = room.UnboundedHeight
+        boundary_segments = room.GetBoundarySegments(boundary_options)
+        curve_list = get_curves_from_boundary(boundary_segments)
+  
 
-        if selected:
-            total_work = len(selected)
+        if (
+            curve_list[0]
+            .Direction.Normalize()
+            .IsAlmostEqualTo(
+                curve_list[len(curve_list) - 1].Direction.Normalize()
+            )
+        ):
+            start_point = curve_list[len(curve_list) - 1].StartPoint
+            end_point = curve_list[0].EndPoint
+            new_curve = DB.Line.ByStartPointEndPoint(start_point, end_point)
+            curve_list.pop()
+            curve_list[0] = new_curve
 
-            # heights = []
-            # curveLists = []
-            # names = []
-            # out_list = []
-
-            # room_data = {}
-
-            bOptions = DB.SpatialElementBoundaryOptions()
-            # if rooms:
-            for r in selected:
-
-                # room_data['height'] = r.UnboundedHeight
-                height = r.UnboundedHeight
-                bound_segs = r.GetBoundarySegments(bOptions)
-                room_name = r.get_Parameter(DB.BuiltInParameter.ROOM_NAME).AsString()
-                room_number = r.get_Parameter(
-                    DB.BuiltInParameter.ROOM_NUMBER
-                ).AsString()
-
-                for segment_list in bound_segs:
-                    count = 0
-                    new_curves = []
-                    for segment in segment_list:
-                        curve = segment.GetCurve()
-                        if count == 0:
-                            new_curves.append(curve)
-                        else:
-                            new_curve = checkCurves(
-                                curve, new_curves[len(new_curves) - 1]
-                            )
-                            if new_curve == curve:
-                                new_curves.append(curve)
-                            else:
-                                new_curves[len(new_curves) - 1] = new_curve
-                        count += 1
-
-                if (
-                    new_curves[0]
-                    .Direction.Normalize()
-                    .IsAlmostEqualTo(
-                        new_curves[len(new_curves) - 1].Direction.Normalize()
-                    )
-                ):
-                    start_point = new_curves[len(new_curves) - 1].StartPoint
-                    end_point = new_curves[0].EndPoint
-                    new_curve = DB.Line.ByStartPointEndPoint(start_point, end_point)
-                    new_curves.pop()
-                    new_curves[0] = new_curve
-
-                total_work = len(new_curves)
-                prog = 0
-                for curve in new_curves:
-                    rev = curve.CreateReversed()
-                    rev_dir = rev.Direction
+        max_value = len(curve_list)
+        with revit.Transaction("Create boundary elevations"):
+            with forms.ProgressBar() as pb:
+                for count, segment_curve in enumerate(curve_list):
+                    reversed_segment = segment_curve.CreateReversed()
+                    reversed_direction = reversed_segment.Direction
                     z_axis = DB.XYZ(0, 0, 1)
-                    cross = rev_dir.CrossProduct(z_axis)
+                    reversed_cross_product = reversed_direction.CrossProduct(z_axis)
 
-                    new_line = curve.CreateTransformed(
-                        DB.Transform.CreateTranslation(6 * cross)
+                    new_line = segment_curve.CreateTransformed(
+                        DB.Transform.CreateTranslation(6 * reversed_cross_product)
                     )
 
-                    startPT = new_line.GetEndPoint(0)
-                    endPT = new_line.GetEndPoint(1)
+                    start_pt = new_line.GetEndPoint(0)
+                    end_pt = new_line.GetEndPoint(1)
 
-                    num1 = (startPT.X + endPT.X) / 2
-                    num2 = (startPT.Y + endPT.Y) / 2
-                    num3 = (startPT.Z + endPT.Z) / 2
+                    num1 = (start_pt.X + end_pt.X) / 2
+                    num2 = (start_pt.Y + end_pt.Y) / 2
+                    num3 = (start_pt.Z + end_pt.Z) / 2
 
-                    xyz1 = DB.XYZ(startPT.X, startPT.Y, startPT.Z + 5.0) - startPT
-                    xyz2 = (endPT - startPT).CrossProduct(xyz1)
+                    xyz1 = DB.XYZ(start_pt.X, start_pt.Y, start_pt.Z + 5.0) - start_pt
+                    xyz2 = (end_pt - start_pt).CrossProduct(xyz1)
 
                     num4 = DB.XYZ.BasisY.AngleTo(xyz2)
 
@@ -151,175 +153,108 @@ if rooms:
 
                     xyz5 = xyz4.Normalize()
 
+
+
+
+                    elevation_marker = DB.ElevationMarker.CreateElevationMarker(
+                        revit.doc, elevation_type_id, xyz3, 100
+                    )
+                    elevation = elevation_marker.CreateElevation(
+                        revit.doc, revit.doc.ActiveView.Id, 1
+                    )
+                    DB.ElementTransformUtils.RotateElement(
+                        revit.doc, elevation_marker.Id, bound, num4
+                    )
+                    xyz6 = elevation.ViewDirection.Normalize()
+                    num5 = xyz5.DotProduct(xyz6)
+
+                    if isclose(num5, -1.0):
+                        view_section = elevation_marker.CreateElevation(
+                            revit.doc, revit.doc.ActiveView.Id, 3
+                        )
+                        revit.doc.Delete(elevation.Id)
+
+                    elif isclose(num5, 1.0):
+                        # if int(num5) == 1:
+                        elevation2 = elevation_marker.CreateElevation(
+                            revit.doc, revit.doc.ActiveView.Id, 2
+                        )
+                        revit.doc.Delete(elevation.Id)
+                        view_section = elevation_marker.CreateElevation(
+                            revit.doc, revit.doc.ActiveView.Id, 1
+                        )
+                        revit.doc.Delete(elevation2.Id)
+                            # views.append(viewSection)
+                            # print("section2")
+
+                    else:
+                        DB.ElementTransformUtils.RotateElement(
+                            revit.doc, elevation_marker.Id, bound, -(2.0 * num4)
+                        )
+                        elevation3 = elevation_marker.CreateElevation(
+                            revit.doc, revit.doc.ActiveView.Id, 2
+                        )
+                        revit.doc.Delete(elevation.Id)
+                        view_section = elevation_marker.CreateElevation(
+                            revit.doc, revit.doc.ActiveView.Id, 1
+                        )
+                        revit.doc.Delete(elevation3.Id)
+
+
+                        if int(num5) == -1:
+
+                            elevation4 = elevation_marker.CreateElevation(
+                                revit.doc, revit.doc.ActiveView.Id, 3
+                            )
+                            revit.doc.Delete(view_section.Id)
+                            view_section = elevation4
+
+
+                    far_clip_param = view_section.get_Parameter(
+                        DB.BuiltInParameter.VIEWER_BOUND_OFFSET_FAR
+                    )
+                    far_clip_param.SetValueString("str(OFFSET)'")
+                    direct = view_section.ViewDirection
+                    angle = direct.AngleOnPlaneTo(DB.XYZ.BasisX, DB.XYZ.BasisZ)
+                    
+                    new_name = get_unique_elevation_name(math.degrees(angle), view_names)
+                    revit.update.set_name(view_section, new_name)
+                    view_names.append(new_name)
+
+                    view_crop_manager = view_section.GetCropRegionShapeManager()
+                    curve_loop = view_crop_manager.GetCropShape()[0]
+                    curve_loop_curves = [x for x in curve_loop]
+                    pt_a = curve_loop_curves[3].GetEndPoint(1)
+                    pt_d = curve_loop_curves[3].GetEndPoint(0)
+                    curve_start = segment_curve.GetEndPoint(1)
+                    curve_end = segment_curve.GetEndPoint(0)
+                    curve_mid = (curve_start + curve_end) / 2
+
+                    if curve_mid.DistanceTo(
+                        segment_curve.GetEndPoint(1)
+                    ) < curve_mid.DistanceTo(pt_a):
+                        pt_a = segment_curve.GetEndPoint(1)
+
+                    if curve_mid.DistanceTo(
+                        segment_curve.GetEndPoint(0)
+                    ) < curve_mid.DistanceTo(pt_d):
+                        pt_d = segment_curve.GetEndPoint(0)
+
+                    pt_b = DB.XYZ(pt_a.X, pt_a.Y, pt_a.Z + height)
+                    pt_c = DB.XYZ(pt_d.X, pt_d.Y, pt_d.Z + height)
+
+                    line_a = DB.Line.CreateBound(pt_a, pt_b)
+                    line_b = DB.Line.CreateBound(pt_b, pt_c)
+                    line_c = DB.Line.CreateBound(pt_c, pt_d)
+                    line_d = DB.Line.CreateBound(pt_d, pt_a)
+
+                    new_curve_loop = DB.CurveLoop.Create(
+                        [line_a, line_b, line_c, line_d]
+                    )
+
                     try:
-
-                        with revit.Transaction("Create Elevations by Room"):
-                            eleMarker = DB.ElevationMarker.CreateElevationMarker(
-                                revit.doc, view_types[0].Id, xyz3, 100
-                            )
-                            ele1 = eleMarker.CreateElevation(
-                                revit.doc, revit.doc.ActiveView.Id, 1
-                            )
-                            DB.ElementTransformUtils.RotateElement(
-                                revit.doc, eleMarker.Id, bound, num4
-                            )
-                            xyz6 = ele1.ViewDirection.Normalize()
-                            num5 = xyz5.DotProduct(xyz6)
-
-                            if isclose(num5, -1.0):
-                                viewSection = eleMarker.CreateElevation(
-                                    revit.doc, revit.doc.ActiveView.Id, 3
-                                )
-                                revit.doc.Delete(ele1.Id)
-                                # views.append(viewSection)
-                                # print("section1")
-
-                            elif isclose(num5, 1.0):
-                                if int(num5) == 1:
-                                    ele2 = eleMarker.CreateElevation(
-                                        revit.doc, revit.doc.ActiveView.Id, 2
-                                    )
-                                    revit.doc.Delete(ele1.Id)
-                                    viewSection = eleMarker.CreateElevation(
-                                        revit.doc, revit.doc.ActiveView.Id, 1
-                                    )
-                                    revit.doc.Delete(ele2.Id)
-                                    # views.append(viewSection)
-                                    # print("section2")
-
-                            else:
-                                DB.ElementTransformUtils.RotateElement(
-                                    revit.doc, eleMarker.Id, bound, -(2.0 * num4)
-                                )
-                                ele3 = eleMarker.CreateElevation(
-                                    revit.doc, revit.doc.ActiveView.Id, 2
-                                )
-                                revit.doc.Delete(ele1.Id)
-                                viewSection = eleMarker.CreateElevation(
-                                    revit.doc, revit.doc.ActiveView.Id, 1
-                                )
-                                revit.doc.Delete(ele3.Id)
-
-                                try:
-                                    num5 = xyz5.DotProduct(
-                                        viewSection.ViewDirection.Normalize()
-                                    )
-
-                                except:
-                                    pass
-
-                                if int(num5) == -1:
-                                    print("-1")
-                                    # print("---")
-                                    ele4 = eleMarker.CreateElevation(
-                                        revit.doc, revit.doc.ActiveView.Id, 3
-                                    )
-                                    revit.doc.Delete(viewSection.Id)
-                                    # views.append(ele4)
-                                    viewSection = ele4
-                                else:
-                                    # views.append(viewSection)
-                                    pass
-                                    # print("-----")
-
-                            farClip = viewSection.get_Parameter(
-                                DB.BuiltInParameter.VIEWER_BOUND_OFFSET_FAR
-                            )
-                            farClip.SetValueString("str(OFFSET)'")
-                            direct = viewSection.ViewDirection
-                            angle = direct.AngleOnPlaneTo(DB.XYZ.BasisX, DB.XYZ.BasisZ)
-                            degrees = round(math.degrees(angle) / 45) * 45
-                            # print(str(math.degrees(angle)) + " > " + str(degrees))
-
-                            if degrees == 45:
-                                direction = "Northwest"
-                            elif degrees == 90:
-                                direction = "North"
-                            elif degrees == 135:
-                                direction = "Northeast"
-                            elif degrees == 180:
-                                direction = "East"
-                            elif degrees == 225:
-                                direction = "Southeast"
-                            elif degrees == 270:
-                                direction = "South"
-                            elif degrees == 315:
-                                direction = "Southwest"
-                            else:
-                                direction = "West"
-                            # print(degrees)
-                            # print(direction)
-
-                            new_name = (
-                                "Elevation - "
-                                + room_name
-                                + " "
-                                + room_number
-                                + " - "
-                                + direction
-                            )
-                            # print(new_name)
-
-                            try:
-                                # print('Creating Elevation "%s"' % new_name)
-                                revit.update.set_name(viewSection, new_name)
-                                message = 'Successfully created "{}"'.format(new_name)
-                                logger.success(message)
-                                view_names.append(new_name)
-                            except Exceptions.ArgumentException:
-
-                                count = 1
-                                copy_name = new_name + "(" + str(count) + ")"
-                                while copy_name in view_names:
-                                    count += 1
-                                    copy_name = new_name + "(" + str(count) + ")"
-                                message = 'View Name "{}" already exists. Appending ({}) to name'.format(
-                                    new_name, str(count)
-                                )
-                                logger.warning(message)
-                                revit.update.set_name(viewSection, copy_name)
-                                view_names.append(copy_name)
-
-                            viewCropManager = viewSection.GetCropRegionShapeManager()
-                            cLoop = viewCropManager.GetCropShape()[0]
-                            cLoopCurves = [x for x in cLoop]
-                            PointA = cLoopCurves[3].GetEndPoint(1)
-                            PointD = cLoopCurves[3].GetEndPoint(0)
-                            curveStart = curve.GetEndPoint(1)
-                            curveEnd = curve.GetEndPoint(0)
-                            curveMP = (curveStart + curveEnd) / 2
-
-                            if curveMP.DistanceTo(
-                                curve.GetEndPoint(1)
-                            ) < curveMP.DistanceTo(PointA):
-                                PointA = curve.GetEndPoint(1)
-
-                            if curveMP.DistanceTo(
-                                curve.GetEndPoint(0)
-                            ) < curveMP.DistanceTo(PointD):
-                                PointD = curve.GetEndPoint(0)
-
-                            PointB = DB.XYZ(PointA.X, PointA.Y, PointA.Z + height)
-                            PointC = DB.XYZ(PointD.X, PointD.Y, PointD.Z + height)
-
-                            LineA = DB.Line.CreateBound(PointA, PointB)
-                            LineB = DB.Line.CreateBound(PointB, PointC)
-                            LineC = DB.Line.CreateBound(PointC, PointD)
-                            LineD = DB.Line.CreateBound(PointD, PointA)
-
-                            curveLoop = DB.CurveLoop.Create(
-                                [LineA, LineB, LineC, LineD]
-                            )
-
-                            try:
-                                viewCropManager.SetCropShape(curveLoop)
-                            except Exceptions.ArgumentException:
-                                print("Unable to modify crop region")
-
-                            prog += 1
-
-                            output.update_progress(prog, total_work)
-
-                    except:
-                        print("error")
-            print("Completed")
+                        view_crop_manager.SetCropShape(new_curve_loop)
+                    except Exceptions.ArgumentException:
+                        print("Unable to modify crop region")
+                        
+                    pb.update_progress(count, max_value)

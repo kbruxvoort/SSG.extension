@@ -1,80 +1,35 @@
-"""
-This script creates individual 3D views for each room in the active view. The active view must be a 3D view.
-"""
+from pyrevit import revit, DB, forms
+from rooms import select_placed_rooms, get_number, get_name, create_expanded_bounding_box
 
-# pylint: disable=import-error,invalid-name,broad-except
-import clr
 
-# Import RevitAPI
-clr.AddReference("RevitAPI")
-import Autodesk
-from Autodesk.Revit.DB import *
-
-from pyrevit import revit
-from pyrevit import script
-from pyrevit import forms
-
-__title__ = " 3D Room Views by Active 3D View"
-__author__ = "{{author}}"
-# __context__ = "active-3d-view"
-
-logger = script.get_logger()
-output = script.get_output()
-
-threeD_view = revit.doc.ActiveView
-
-forms.check_viewtype(threeD_view, ViewType.ThreeD, exitscript=True)
-
-rooms = []
-collector = (
-    FilteredElementCollector(revit.doc)
-    .OfCategory(BuiltInCategory.OST_Rooms)
-    .ToElements()
+threeD_type_id = revit.doc.GetDefaultElementTypeId(
+    DB.ElementTypeGroup.ViewType3D
 )
-for c in collector:
-    if c.Area != 0:
-        rooms.append(c)
 
-views = []
-col2 = FilteredElementCollector(revit.doc).OfClass(View3D).ToElements()
-for view in col2:
+view_names = []
+threeD_views = DB.FilteredElementCollector(revit.doc).OfClass(DB.View3D).ToElements()
+for view in threeD_views:
     if view.IsTemplate == False:
-        views.append(view.Name)
+        view_names.append(view.Name)
 
 
-total_work = len(rooms)
-for idx, room in enumerate(rooms):
-    roomName = room.LookupParameter("Name").AsString()
-    roomNumber = room.LookupParameter("Number").AsString()
-    newName = "3D - " + roomName + " " + roomNumber
+rooms = select_placed_rooms(revit.doc)
 
-    # Get View Family Type of Plan
-    viewTypeId = threeD_view.GetTypeId()
-    level = room.LevelId
+if rooms:
+    max_value = len(rooms)
+    with revit.Transaction("Create floor plans by room"):
+        with forms.ProgressBar() as pb:
+            for count, room in enumerate(rooms, start=1):
+                new_name = "3D - {} - {}".format(get_number(room), get_name(room))
+                if new_name not in view_names:
+                    created_view = DB.View3D.CreateIsometric(revit.doc, threeD_type_id)
+                    new_bounding_box = create_expanded_bounding_box(room, z=(-1,0))
+                    
+                    # Set the new Bounding Box
+                    created_view.SetSectionBox(new_bounding_box)
 
-    with revit.Transaction("Create 3D Views by Room"):
-        if newName not in views:
-            # Get Room Bounding Box and Create New
-            roomBB = room.get_BoundingBox(threeD_view)
-            rMax = roomBB.Max
-            rMin = roomBB.Min
-            newMaxP = XYZ(rMax.X + 1, rMax.Y + 1, rMax.Z + 1)
-            newMinP = XYZ(rMin.X - 1, rMin.Y - 1, rMin.Z - 1)
-            newBB = BoundingBoxXYZ()
-            newBB.Max = newMaxP
-            newBB.Min = newMinP
-
-            threeD = View3D.CreateIsometric(revit.doc, viewTypeId)
-            # box = app.Create.NewBoundingBoxXYZ()
-            # box.Min = Min[count]
-            # box.Max = Max[count]
-            # bbox.append(box)
-            a = View3D.SetSectionBox(threeD, newBB)
-            threeD.Name = newName
-            print("Creating 3D View: %s" % threeD.Name)
-
-        else:
-            message = 'View "%s" already exists' % newName
-            logger.warning(message)
-        output.update_progress(idx + 1, total_work)
-print("Completed\n")
+                    # Name the New View
+                    created_view.Name = new_name
+                else:
+                    print("{} already exists in project".format(new_name))
+                pb.update_progress(count, max_value)

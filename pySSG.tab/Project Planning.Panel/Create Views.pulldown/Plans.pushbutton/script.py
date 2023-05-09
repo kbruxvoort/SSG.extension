@@ -1,106 +1,51 @@
-# pylint: disable=import-error,invalid-name,broad-except
-import clr
-
-# Import RevitAPI
-clr.AddReference("RevitAPI")
-import Autodesk
-from Autodesk.Revit.DB import *
-
-from pyrevit import revit
-from pyrevit import script
-from pyrevit import forms
+from pyrevit import revit, DB, forms
+from rooms import select_placed_rooms, get_name, get_number, create_expanded_bounding_box
 
 
-logger = script.get_logger()
-output = script.get_output()
-
-plan = revit.doc.ActiveView
-
-# forms.check_viewtype(plan, ViewType.FloorPlan, exitscript=True)
-
-room_tags = (
-    FilteredElementCollector(revit.doc, revit.doc.ActiveView.Id)
-    .OfCategory(BuiltInCategory.OST_RoomTags)
-    .WhereElementIsNotElementType()
-    .ToElements()
+plan_type_id = revit.doc.GetDefaultElementTypeId(
+    DB.ElementTypeGroup.ViewTypeFloorPlan
 )
-if room_tags:
-    room_tag = room_tags[0]
+default_tag_id = revit.doc.GetDefaultFamilyTypeId(
+    DB.ElementId(DB.BuiltInCategory.OST_RoomTags)
+)
 
-views = []
-col2 = FilteredElementCollector(revit.doc).OfClass(ViewPlan).ToElements()
-for view in col2:
+view_names = []
+plan_views = DB.FilteredElementCollector(revit.doc).OfClass(DB.ViewPlan).ToElements()
+for view in plan_views:
     if view.IsTemplate == False:
-        views.append(view.Name)
+        view_names.append(view.Name)
 
 
-filter = Architecture.RoomFilter()
-collector = (
-    FilteredElementCollector(revit.doc, plan.Id).WherePasses(filter).ToElements()
-)
+rooms = select_placed_rooms(revit.doc)
 
-total_work = len(collector)
-for idx, room in enumerate(collector):
-    roomName = room.LookupParameter("Name").AsString()
-    roomNumber = room.LookupParameter("Number").AsString()
-    newName = "Floor Plan - " + roomName + " " + roomNumber
+if rooms:
+    max_value = len(rooms)
+    with revit.Transaction("Create floor plans by room"):
+        with forms.ProgressBar() as pb:
+            for count, room in enumerate(rooms, start=1):
 
-    # Get View Family Type of Plan
-    viewTypeId = plan.GetTypeId()
-    level = room.LevelId
-    with revit.Transaction("Create Plans by Room"):
-        if newName not in views:
-            # Create View
-            roomView = ViewPlan.Create(revit.doc, viewTypeId, level)
+                new_name = "Floor Plan - {} - {}".format(get_number(room), get_name(room))
+                if new_name not in view_names:
+                    created_view = DB.ViewPlan.Create(revit.doc, plan_type_id, room.LevelId)
+                    new_bounding_box = create_expanded_bounding_box(room)
 
-            # Get Room Bounding Box and Create New
-            roomBB = room.get_BoundingBox(plan)
-            rMax = roomBB.Max
-            rMin = roomBB.Min
-            newMaxP = XYZ(rMax.X + 1, rMax.Y + 1, rMax.Z)
-            newMinP = XYZ(rMin.X - 1, rMin.Y - 1, rMin.Z)
-            newBB = BoundingBoxXYZ()
-            newBB.Max = newMaxP
-            newBB.Min = newMinP
+                    # Set the new Bounding Box
+                    created_view.CropBoxActive = True
+                    created_view.CropBoxVisible = False
+                    created_view.CropBox = new_bounding_box
+                    annotation_crop_parameter = created_view.get_Parameter(
+                        DB.BuiltInParameter.VIEWER_ANNOTATION_CROP_ACTIVE
+                    )
+                    annotation_crop_parameter.Set(True)
 
-            # Set the new Bounding Box
-            roomView.CropBoxActive = True
-            roomView.CropBoxVisible = False
-            roomView.CropBox = newBB
-            aCrop = roomView.get_Parameter(
-                BuiltInParameter.VIEWER_ANNOTATION_CROP_ACTIVE
-            )
-            aCrop.Set(True)
-
-            # Name the New View
-
-            roomView.Name = newName
-            print("Creating plan: %s" % roomView.Name)
-
-        else:
-            message = 'View "%s" already exists' % newName
-            logger.warning(message)
-
-        try:
-        #     # Find Center of Room and Move it
-            roomId = LinkElementId(room.Id)
-        #     bbox = roomView.CropBox
-        #     XYZLocation = (bbox.Max + bbox.Min) / 2.0
-            
-            # location = Autodesk.Revit.DB.UV(XYZLocation.X, XYZLocation.Y)
-            current = room.Location.Point
-            location = Autodesk.Revit.DB.UV(current.X, current.Y)
-        #     newloc = XYZLocation - current
-        #     room.Location.Move(newloc)
-
-        #     # Tag Room
-            roomTag = revit.doc.Create.NewRoomTag(roomId, location, roomView.Id)
-            # roomTag = revit.doc.Create.NewRoomTag(roomId, location, roomView.Id)
-            # roomTag.RoomTagType = room_tag.RoomTagType
-        #     # print("-Tagging Room")
-        except Exception as e:
-            message = 'Room tag for "%s" already exists' % roomName
-            logger.warning(e)
-            continue
-        output.update_progress(idx + 1, total_work)
-print("Completed\n")
+                    # Name the New View
+                    created_view.Name = new_name
+                    linked_room_id = DB.LinkElementId(room.Id)
+                    location = DB.UV(
+                        room.Location.Point.X, 
+                        room.Location.Point.Y
+                    )
+                    room_tag = revit.doc.Create.NewRoomTag(linked_room_id, location, created_view.Id)
+                else:
+                    print("{} already exists in project".format(new_name))
+                pb.update_progress(count, max_value)
