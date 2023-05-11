@@ -1,4 +1,4 @@
-tooltip: This script creates sheets based on the number of views for each room. This is designed for the 11x17 Titleblock.
+tooltip: This script creates one or more sheets per selected room and packs corresponding views using a Best Fit approximation. The script groups views by checking for unplaced views that contain the room number in the view name.
 title: "Sheets by\nRoom"
 author: Kyle Bruxvoort
 context:
