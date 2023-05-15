@@ -2,13 +2,13 @@ import re
 from System.Collections.Generic import List
 
 from pyrevit import revit, DB, forms
-from parameters.family import (
-    param_has_value, 
+from parameters import (
+    has_value, 
     split_name, 
     sort_parameter_into_group, 
     PARAM_MAP, 
     CATEGORY_MAP, 
-    modify_parameter_group
+    modify_group
 )
 
 
@@ -24,7 +24,7 @@ def suffix_sort(param):
 
 def constraints_sort(param):
     name = param.Definition.Name
-    prefix, suffix = split_name(name)
+    prefix, suffix = split_name(param)
     if "width" in suffix.lower():
         group = 0
     elif "depth" in name.lower():
@@ -68,9 +68,9 @@ def identity_sort(param):
         group = 8
     
     current_type = revit.doc.FamilyManager.CurrentType  
-    has_value = param_has_value(current_type, param)
+    parameter_has_value = has_value(param, current_type)
         
-    return (group, not(has_value), name)
+    return (group, not(parameter_has_value), name)
   
     
 def lengths_sort(param):
@@ -91,11 +91,11 @@ def lengths_sort(param):
 
 def default_sort(param):
     current_type = revit.doc.FamilyManager.CurrentType
-    has_value = param_has_value(current_type, param)
+    parameter_has_value = has_value(param, current_type)
     name = param.Definition.Name
     instance = param.IsInstance
     param_type = param.Definition.ParameterType
-    return (not(has_value), not(instance), param_type, name)
+    return (not(parameter_has_value), not(instance), param_type, name)
 
 
 SORT_FUNCTIONS = {
@@ -131,7 +131,7 @@ with revit.Transaction("Reorder parameters"):
     for k,v in param_dict.items():
         for param in v:
             if param.UserModifiable:
-                modify_parameter_group(param, k)
+                modify_group(param, k)
             param_list.Add(param)
 
     revit.doc.FamilyManager.ReorderParameters(param_list)
