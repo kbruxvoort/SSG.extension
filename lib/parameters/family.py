@@ -40,7 +40,7 @@ CATEGORY_MAP = {
         
 
 def is_built_in(family_parameter):
-    return family_parameter.definition.BuiltInParameter != DB.BuiltInParameter.INVALID
+    return family_parameter.Definition.BuiltInParameter != DB.BuiltInParameter.INVALID
     
 
 def get_parameter_type_name(family_parameter):
@@ -88,7 +88,7 @@ def has_value(family_parameter, family_type):
     else:
         is_text = family_parameter.Definition.ParameterType == DB.ParameterType.Text
     if is_text:
-        return bool(family_parameter.get_value(family_type))
+        return bool(get_value(family_parameter, family_type))
     else:
         return family_type.HasValue(family_parameter)
         
@@ -147,8 +147,7 @@ def sort_parameter_into_group(parameter, param_map_dict):
         return parameter.Definition.ParameterGroup
     if parameter.Definition.Visible is False:
         return DB.BuiltInParameterGroup.INVALID
-    name = parameter.Definition.Name
-    prefix, suffix = split_name(name)
+    prefix, suffix = split_name(parameter)
     if prefix:
         if prefix.upper() == "ENTER" and suffix.lower() not in param_map_dict:
             return DB.BuiltInParameterGroup.PG_CONSTRUCTION
