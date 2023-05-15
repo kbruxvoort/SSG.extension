@@ -258,7 +258,7 @@
         <Style x:Key="ExistingParameterStyle" TargetType="{x:Type DataGridRow}">
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Style.Triggers>
-                <DataTrigger Binding="{Binding IsExisting}" Value="True">
+                <DataTrigger Binding="{Binding is_existing}" Value="True">
                     <Setter Property="Background" Value="#C0C7CD" />
                     <Setter Property="Foreground" Value="#778593" />
                 </DataTrigger>
