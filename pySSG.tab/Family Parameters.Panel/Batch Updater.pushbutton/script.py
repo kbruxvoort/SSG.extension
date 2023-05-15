@@ -107,8 +107,8 @@ class MyWindow(Windows.Window):
     def remove_definition(self, sender, args):
         selected_items = list(self.selectedDefinitionsGrid.SelectedItems)
         for item in selected_items:
-            if item.is_existing is False:
-                self.selectedDefinitionsGrid.ItemsSource.Remove(item)
+            # if item.is_existing is False:
+            self.selectedDefinitionsGrid.ItemsSource.Remove(item)
 
     # @property
     # def ParameterGroups(self):
@@ -153,17 +153,22 @@ class MyWindow(Windows.Window):
                 
     def populate_standard(self, sender, e):
         collection = self.selectedDefinitionsGrid.ItemsSource
+        existing_names = [p.Definition.Name for p in revit.doc.FamilyManager.Parameters if p.IsShared]
         for k,v in STANDARD_PARAMETERS.items():
             def_file = SharedParameterFile()
             ed = def_file.query(name=k, first_only=True)
             if ed:
                 if ed.Name not in [item.name for item in collection]:
+                    if ed.Name in existing_names:
+                        exists = True
+                    else:
+                        exists = False
                     collection.Add(SharedParameterItem(
                         name=ed.Name, 
                         element=ed, 
                         is_instance=False, 
                         parameter_group=ParameterGroupItem(v),
-                        exists=False
+                        exists=exists
                     ))
                 
     def add_selected(self, selected):
