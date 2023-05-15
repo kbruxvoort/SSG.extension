@@ -1,0 +1,5 @@
+tooltip: This script creates one or more sheets per selected  views using a Best Fit approximation.
+title: "Pack Views"
+author: Kyle Bruxvoort
+context:
+  - doc-project
