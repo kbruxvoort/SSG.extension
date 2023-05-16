@@ -7,7 +7,7 @@ from pyrevit import revit, DB, script
 from parameters import (
     STANDARD_PARAMETERS,
     PARAM_MAP,
-    param_has_value,
+    has_value,
     get_value,
     sort_parameter_into_group
 )
@@ -281,23 +281,23 @@ def test_param_values(family_document):
     
     # BuiltIn values
     mfr_param = fam_mgr.get_Parameter(DB.BuiltInParameter.ALL_MODEL_MANUFACTURER)
-    mfr_value = get_value(current_type, mfr_param)
+    mfr_value = get_value(mfr_param, current_type)
     mfr_score = int(validate_manufacturer_value(mfr_value))
     if mfr_score < 1:
         comment_list.append(mfr_param.Definition.Name)
     
     keynote_param = fam_mgr.get_Parameter(DB.BuiltInParameter.KEYNOTE_PARAM)
-    keynote_score = int(param_has_value(current_type, keynote_param))
+    keynote_score = int(has_value(keynote_param, current_type))
     if keynote_score < 1:
         comment_list.append(keynote_param.Definition.Name)
     
     assem_param = fam_mgr.get_Parameter(DB.BuiltInParameter.UNIFORMAT_CODE)
-    assem_score = int(param_has_value(current_type, assem_param))
+    assem_score = int(has_value(assem_param, current_type))
     if assem_score < 1:
         comment_list.append(assem_param.Definition.Name)
     
     url_param = fam_mgr.get_Parameter(DB.BuiltInParameter.ALL_MODEL_URL)
-    url_value = get_value(current_type, url_param)
+    url_value = get_value(url_param, current_type)
     url_score = int(url_value == "https://fetchbim.com")
     if url_score < 1:
         comment_list.append(url_param.Definition.Name)
@@ -311,7 +311,7 @@ def test_param_values(family_document):
     # Has Formula or Has Value unless it's builtin. Will need to filter out 
     others_score = 0
     for p in parameters:
-        if param_has_value(current_type, p):
+        if has_value(p, current_type):
             others_score += 1
         else:
             comment_list.append(p.Definition.Name)    
