@@ -5,7 +5,8 @@
         Width="1500"
         MinWidth="1500"
         Height="714"
-        MinHeight="714">
+        MinHeight="714"
+        ShowInTaskbar="True">
 
     <Window.Resources>
         <SolidColorBrush x:Key="blue-300" Color="#2795C0" />
@@ -443,17 +444,14 @@
                       RowStyle="{StaticResource ExistingParameterStyle}">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="NAME" Width="*" Binding="{Binding name}" IsReadOnly="True"/>
-                <DataGridTemplateColumn Header="PARAMETER GROUP" Width="*" SortMemberPath="parameter_group" >
+                <DataGridTemplateColumn ClipboardContentBinding="{Binding group}" Header="PARAMETER GROUP" Width="*" SortMemberPath="group" >
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <Grid>
-                                <ComboBox VerticalAlignment="Center" 
-                                          HorizontalAlignment="Stretch"
-                                          IsEditable="False"
-                                          ItemsSource="{Binding parameter_groups, ElementName=window}"
-                                          SelectedValue="{Binding parameter_group, NotifyOnSourceUpdated=True, UpdateSourceTrigger=PropertyChanged}"
-                                          SelectedValuePath="name"
-                                          SourceUpdated="target_updated" />
+                                <ComboBox ItemsSource="{Binding parameter_groups, ElementName=window}"
+                                          SelectedValue="{Binding group, Mode=TwoWay, NotifyOnSourceUpdated=True, UpdateSourceTrigger=PropertyChanged}"
+                                          SourceUpdated="target_updated"
+                                          IsEditable="False"/>
                             </Grid>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>

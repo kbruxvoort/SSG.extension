@@ -3,7 +3,7 @@ clr.AddReference('System.Windows.Forms')
 clr.AddReference('IronPython.Wpf')
 clr.AddReference("System.Core")
 
-from pyrevit import script, UI, DB, revit
+from pyrevit import script, UI, DB, revit, forms
 from parameters import SharedParameterFile, STANDARD_PARAMETERS
 
 import wpf
@@ -13,6 +13,25 @@ from System.Collections.ObjectModel import ObservableCollection
 from System.Windows.Data import IValueConverter
 from System.Linq import Enumerable
 from System import Guid, Enum
+
+
+class ParameterGroupItem:
+    def __init__(self, enum_member=None):
+        self.enum_member = enum_member
+
+    def __repr__(self):
+        return self.name
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def name(self):
+        return DB.LabelUtils.GetLabelFor(self.enum_member) + " " + "({})".format(self.enum_member)
+
+    def ToString(self):
+        return self.name
+
 
 class ExternalDefinitionItem:
     """Helper Class for displaying selected sheets in my custom GUI."""
@@ -26,8 +45,7 @@ class ExternalDefinitionItem:
         guid=None, 
         user_modifiable=True, 
         visible=True, 
-        is_instance=False, 
-        parameter_group=None, 
+        is_instance=False,  
         parameter_type=None
     ):
         self.name = name
@@ -39,31 +57,24 @@ class ExternalDefinitionItem:
         self.user_modifiable = user_modifiable
         self.visible = visible
         self.is_instance = is_instance
-        self.parameter_group = parameter_group
         self.parameter_type = parameter_type
 
 
-class ParameterGroupItem:
-    def __init__(self, enum_member=None):
-        self.enum_member = enum_member   
-        
-    def __repr__(self):
-        return self.name
-        
-    @property
-    def name(self):
-        return DB.LabelUtils.GetLabelFor(self.enum_member) + " " + "({})".format(self.enum_member)
+
 
 class SharedParameterItem:
-    def __init__(self, name, element, parameter_group=ParameterGroupItem(DB.BuiltInParameterGroup.PG_IDENTITY_DATA), is_instance=False, exists=False):
+    def __init__(self, name, element, group, is_instance=False, exists=False):
         self.name = name
         self.element = element
-        self.parameter_group = parameter_group
+        self.group = group
         self.is_instance = is_instance
         self.is_existing = exists
         
 
-class MyWindow(Windows.Window):
+class BatchUpdater(forms.WPFWindow):
+    # parameter_groups = sorted([ParameterGroupItem(enum_member=pg) for pg in Enum.GetValues(DB.BuiltInParameterGroup)], key=lambda x: x.name)
+    parameter_groups = sorted([pg for pg in Enum.GetValues(DB.BuiltInParameterGroup)], key=lambda x: x.ToString())
+    
     def __init__(self, xaml_filename):
         wpf.LoadComponent(self, script.get_bundle_file(xaml_filename))
         self.external_definitions = self.populate_definitions()
@@ -72,8 +83,6 @@ class MyWindow(Windows.Window):
         self.selectedDefinitionsGrid.Items.Clear()
         self.selectedDefinitionsGrid.ItemsSource = ObservableCollection[object]()
         
-        self.parameter_groups = sorted([ParameterGroupItem(pg) for pg in Enum.GetValues(DB.BuiltInParameterGroup)], key=lambda x: x.name)
-        # self.parameter_groups = sorted([pg for pg in DB.BuiltInParameterGroup.GetValues(DB.BuiltInParameterGroup)], key=lambda x: x.ToString())
         self.parameter_types = sorted(set(pt.ParameterType for pt in SharedParameterFile().list_definitions()), key=lambda x: x.ToString())
         self.param_types.ItemsSource = self.parameter_types
 
@@ -83,13 +92,14 @@ class MyWindow(Windows.Window):
         selected_list = self.selectedDefinitionsGrid.ItemsSource
         selected_definitions = self.externalDefinitionsGrid.SelectedItems
         for sd in selected_definitions:
-            if sd.name not in [s.name for s in list(selected_list)]:
-                # existing_param = fam_mgr.get_Parameter(Guid(sd.Guid))
+            if sd.name not in [s.name for s in list(selected_list)]:                
                 existing_param = fam_mgr.get_Parameter(sd.guid)
                 if existing_param:
                     selected_list.Add(SharedParameterItem(
                         name=existing_param.Definition.Name, 
-                        element=existing_param, 
+                        element=existing_param,
+                        # group=ParameterGroupItem(enum_member=existing_param.Definition.ParameterGroup), 
+                        group=existing_param.Definition.ParameterGroup, 
                         is_instance=existing_param.IsInstance, 
                         exists=True
                     ))
@@ -99,7 +109,9 @@ class MyWindow(Windows.Window):
                     selected_list.Add(SharedParameterItem(
                         name=sd.name, 
                         element=sd.element, 
-                        is_instance=is_instance, 
+                        is_instance=is_instance,
+                        # group = ParameterGroupItem(enum_member=DB.BuiltInParameterGroup.PG_IDENTITY_DATA), 
+                        group = DB.BuiltInParameterGroup.PG_IDENTITY_DATA, 
                         exists=is_existing
                     ))
 
@@ -109,14 +121,6 @@ class MyWindow(Windows.Window):
         for item in selected_items:
             # if item.is_existing is False:
             self.selectedDefinitionsGrid.ItemsSource.Remove(item)
-
-    # @property
-    # def ParameterGroups(self):
-    #     return self.parameter_groups
-    
-    # @property
-    # def ParameterTypes(self):
-    #     return self.parameter_types
 
     
     def populate_definitions(self):
@@ -133,8 +137,7 @@ class MyWindow(Windows.Window):
                 guid=ed.GUID, 
                 user_modifiable=ed.UserModifiable, 
                 visible=ed.Visible, 
-                is_instance=False, 
-                parameter_group=None, 
+                is_instance=False,  
                 parameter_type=ed.ParameterType))
         return collection
     
@@ -147,7 +150,8 @@ class MyWindow(Windows.Window):
                     name=fp.Definition.Name, 
                     element=fp, 
                     is_instance=fp.IsInstance, 
-                    parameter_group=ParameterGroupItem(fp.Definition.ParameterGroup),
+                    # group=ParameterGroupItem(enum_member=fp.Definition.ParameterGroup),
+                    group=fp.Definition.ParameterGroup,
                     exists=True
                 ))
                 
@@ -159,17 +163,28 @@ class MyWindow(Windows.Window):
             ed = def_file.query(name=k, first_only=True)
             if ed:
                 if ed.Name not in [item.name for item in collection]:
+                    is_existing = False
                     if ed.Name in existing_names:
-                        exists = True
-                    else:
-                        exists = False
-                    collection.Add(SharedParameterItem(
-                        name=ed.Name, 
-                        element=ed, 
-                        is_instance=False, 
-                        parameter_group=ParameterGroupItem(v),
-                        exists=exists
-                    ))
+                        fp = revit.doc.FamilyManager.get_Parameter(ed.GUID)
+                        if fp:
+                            is_existing = True
+                            collection.Add(SharedParameterItem(
+                            name=fp.Definition.Name, 
+                            element=fp, 
+                            is_instance=fp.IsInstance,
+                            # group=ParameterGroupItem(enum_member=fp.Definition.ParameterGroup), 
+                            group=fp.Definition.ParameterGroup,
+                            exists=True
+                        ))
+                    if is_existing is False:
+                        collection.Add(SharedParameterItem(
+                            name=ed.Name, 
+                            element=ed, 
+                            is_instance=False, 
+                            # group=ParameterGroupItem(enum_member=v),
+                            group=v,
+                            exists=False
+                        ))
                 
     def add_selected(self, selected):
         pass
@@ -215,6 +230,7 @@ class MyWindow(Windows.Window):
         fam_mgr = revit.doc.FamilyManager
         with revit.Transaction("Update Shared Parameters"):
             for item in self.selectedDefinitionsGrid.ItemsSource:
+                # print(item.group)
                 if item.is_existing:
                     try:
                         if item.is_instance:
@@ -222,13 +238,12 @@ class MyWindow(Windows.Window):
                         else:
                             fam_mgr.MakeType(item.element)
                     except Exception as e:
-                        print("Unable to change IsInstance for {}. {}".format(item.Name, e))
-                    item.element.Definition.ParameterGroup = item.parameter_group.enum_member
+                        print("Unable to change IsInstance for {}. {}".format(item.name, e))
+                    item.element.Definition.ParameterGroup = item.group
                 else:
-                    fam_mgr.AddParameter(item.element, item.parameter_group.enum_member, item.is_instance)
+                    fam_mgr.AddParameter(item.element, item.group, item.is_instance)
         
         self.Close()
 
         
-my_window = MyWindow('ui.xaml')
-my_window.ShowDialog()
+updater = BatchUpdater('ui.xaml').ShowDialog()
