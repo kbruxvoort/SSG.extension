@@ -1,4 +1,4 @@
-from pyrevit import DB
+from pyrevit import DB, forms
 
 
 
@@ -41,13 +41,6 @@ def find_best_fit(bin, rectangle):
 
     return best_fit_index
 
-# def split_rectangle(rectangle, width, height, draw_cut_lines=False):
-#     remaining_areas = []
-#     if width < rectangle.width:
-#         remaining_areas.append(Rectangle(None, rectangle.width - width, rectangle.height, rectangle.x + width, rectangle.y))
-#     if height < rectangle.height:
-#         remaining_areas.append(Rectangle(None, width, rectangle.height - height, rectangle.x, rectangle.y + height))
-#     return remaining_areas
 
 def split_rectangle(doc, sheet, rectangle, width, height, draw_cut_lines=False):
     remaining_areas = []
@@ -77,7 +70,8 @@ def pack_views(doc, view_rectangles, titleblock, sheet_name=None, border_top=0, 
     
     for view_rect in view_rectangles:
         if not is_view_valid(view_rect, start_bin.width, start_bin.height):
-            raise ViewSizeError("View {} is too large to fit on sheet".format(view_rect.view.Name))
+            forms.alert("{} is larger than the sheet".format(view_rect.view.Name), exitscript=True)
+            # raise ViewSizeError("View {} is too large to fit on sheet".format(view_rect.view.Name))
         placed = False
         
         for sheet in sheets:
@@ -90,12 +84,7 @@ def pack_views(doc, view_rectangles, titleblock, sheet_name=None, border_top=0, 
                 x_offset = sheet.border_left
                 y_offset = sheet.border_bottom
                 placement_pt = DB.XYZ(view_rect.x + x_offset, view_rect.y + y_offset, 0)
-                # print(view_rect.view.Name)
-                # print(view_rect.width, view_rect.height)
-                # print(placement_pt)
-                # print("---------")
                 placed_view = place_view(doc, sheet.sheet.Id, view_rect, placement_pt)
-                # DB.Viewport.Create(doc, sheet.sheet.Id, view_rect.view.Id, placement_pt)
                 placed = True
                 break
             
