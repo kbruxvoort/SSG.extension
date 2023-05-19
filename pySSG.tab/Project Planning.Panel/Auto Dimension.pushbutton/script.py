@@ -19,17 +19,68 @@ def get_instance_refs(family_instance):
                 references[str(ref_type)] = ref_list[0]
                 
     return references
-
-def determine_block_center(family_instances):
-    location_pts = []
+    
+def get_block_box_and_axis(family_instances, view=None):
+    x_pts = []
+    y_pts = []
+    z_pts = []
     for instance in family_instances:
-        try:
-            pt = instance.Location.Point
-            location_pts.append(pt)
-        except AttributeError:
-            pass
-    if location_pts:
-        return sum(location_pts) / len(location_pts)
+        inst_bbox = instance.get_BoundingBox(view)
+        x_pts.append(inst_bbox.Min.X)
+        x_pts.append(inst_bbox.Max.X)
+        y_pts.append(inst_bbox.Min.Y)
+        y_pts.append(inst_bbox.Max.Y)
+        z_pts.append(inst_bbox.Min.Z)
+        z_pts.append(inst_bbox.Max.Z)
+    
+    max_x = max(x_pts)
+    max_y = max(y_pts)
+    max_z = max(z_pts)
+    min_x = min(x_pts)
+    min_y = min(y_pts)
+    min_z = min(z_pts)
+    
+    bbox = DB.BoundingBoxXYZ()
+    bbox.Min = DB.XYZ(min_x, min_y, min_z)
+    bbox.Max = DB.XYZ(max_x, max_y, max_z)
+    axis = determine_long_axis(max_x, min_x, max_y, min_y)
+    
+    return bbox, axis
+
+def determine_long_axis(max_x, min_x, max_y, min_y):
+    if max_y - min_y > max_x - min_x:
+        return "Y"
+    else:
+        return "X"
+    
+def find_outside_instances(document, family_instances, tolerance=0.084):
+    # outside_instances = []
+    left_instances = []
+    right_instances = []
+    
+    block_bbox, long_axis = get_block_box_and_axis(family_instances, document.ActiveView)
+
+    for instance in family_instances:
+        bounding_box = instance.get_BoundingBox(document.ActiveView)
+        if bounding_box:
+            min_point = bounding_box.Min
+            max_point = bounding_box.Max
+
+            if long_axis == "X":
+                if abs(block_bbox.Min.X - min_point.X) <= tolerance:
+                    left_instances.append(instance)
+                if abs(block_bbox.Max.X - max_point.X) <= tolerance:
+                    right_instances.append(instance)
+                    
+            elif long_axis == "Y":
+                if abs(block_bbox.Min.Y - min_point.Y) <= tolerance:
+                    left_instances.append(instance)
+                if abs(block_bbox.Max.Y - max_point.Y) <= tolerance:
+                    right_instances.append(instance)
+                    
+    return (left_instances, right_instances)
+
+
           
 
 def create_dimension(document, family_instances):
@@ -45,6 +96,7 @@ def create_dimension(document, family_instances):
     OFFSET_VALUE = 1
     
     if document.ActiveView.ViewType in PLAN_TYPES:
+        # All instances get left, right
         for family_instance in family_instances:
             if family_instance.SuperComponent is None:
                 ref_dict = get_instance_refs(family_instance)
@@ -58,24 +110,44 @@ def create_dimension(document, family_instances):
                     ref_array_1.Append(ref_dict.get('Right'))
                     dim_line_1 = DB.Line.CreateUnbound(family_instance.Location.Point.Add(offset), pt2_direction)
                     dimension_1 = document.Create.NewDimension(document.ActiveView, dim_line_1, ref_array_1)
-                    
-                if ref_dict.get('Front') and ref_dict.get('Back'):
-                    ref_array_2 = DB.ReferenceArray()
-                    offset_direct = DB.XYZ(-orientation.Y, orientation.X, 0)
-                    offset = offset_direct.Multiply(-OFFSET_VALUE)
-                    ref_array_2.Append(ref_dict.get('Front'))
-                    ref_array_2.Append(ref_dict.get('Back'))
-                    test = DB.XYZ(orientation.Y, orientation.X, orientation.Z)
-                    dim_line_2 = DB.Line.CreateUnbound(family_instance.Location.Point.Add(offset), orientation)
-                    dimension_2 = document.Create.NewDimension(document.ActiveView, dim_line_2, ref_array_2)
+        
+        left_instances, right_instances = find_outside_instances(document, family_instances)
+        for left in left_instances:
+            ref_dict = get_instance_refs(left)
+            orientation = left.FacingOrientation
+            if ref_dict.get('Front') and ref_dict.get('Back'):
+                ref_array_2 = DB.ReferenceArray()
+                offset_direct = DB.XYZ(orientation.Y, orientation.X, 0)
+                offset = offset_direct.Multiply(OFFSET_VALUE)
+                ref_array_2.Append(ref_dict.get('Front'))
+                ref_array_2.Append(ref_dict.get('Back'))
+                test = DB.XYZ(orientation.Y, orientation.X, orientation.Z)
+                pt = left.get_BoundingBox(document.ActiveView)
+                dim_line_2 = DB.Line.CreateUnbound(pt.Min.Subtract(offset), orientation)
+                dimension_2 = document.Create.NewDimension(document.ActiveView, dim_line_2, ref_array_2)
+                
+        for right in right_instances:
+            ref_dict = get_instance_refs(right)
+            orientation = right.FacingOrientation
+            if ref_dict.get('Front') and ref_dict.get('Back'):
+                ref_array_3 = DB.ReferenceArray()
+                offset_direct = DB.XYZ(orientation.Y, orientation.X, 0)
+                offset = offset_direct.Multiply(-OFFSET_VALUE)
+                ref_array_3.Append(ref_dict.get('Front'))
+                ref_array_3.Append(ref_dict.get('Back'))
+                test = DB.XYZ(orientation.Y, orientation.X, orientation.Z)
+                pt = right.get_BoundingBox(document.ActiveView)
+                dim_line_3 = DB.Line.CreateUnbound(pt.Max.Add(offset), orientation)
+                dimension_3 = document.Create.NewDimension(document.ActiveView, dim_line_3, ref_array_3)
     
     elif document.ActiveView.ViewType in ELELVATION_TYPES:
+        view_direction = document.ActiveView.ViewDirection
         for family_instance in family_instances:
             if family_instance.SuperComponent is None:
                 bbox = family_instance.get_BoundingBox(document.ActiveView)
                 ref_dict = get_instance_refs(family_instance)
                 orientation = family_instance.FacingOrientation
-                view_direction = document.ActiveView.ViewDirection
+                
                 dot_product = view_direction.DotProduct(orientation)
                 threshold = .01
                 ref_1 = None
@@ -110,34 +182,53 @@ def create_dimension(document, family_instances):
                     test = DB.XYZ(-view_direction.Y, view_direction.X, 0)
                     dim_line_3 = DB.Line.CreateUnbound(pt1, test)
                     dimension_3 = document.Create.NewDimension(document.ActiveView, dim_line_3, ref_array_3)
+        
+        left_instances, right_instances = find_outside_instances(document, family_instances)
+        for left in left_instances:
+            bbox = left.get_BoundingBox(document.ActiveView)
+            ref_dict = get_instance_refs(left)
+            orientation = left.FacingOrientation
+            view_direction = document.ActiveView.ViewDirection
+            ref_array_4 = DB.ReferenceArray()
+            if ref_dict.get('Bottom') and ref_dict.get('Top'):
+                ref_1 = ref_dict.get('Bottom')
+                ref_2 = ref_dict.get('Top')
+                ref_array_4.Append(ref_1)
+                ref_array_4.Append(ref_2)
+                offset = DB.XYZ.BasisX.Multiply(OFFSET_VALUE)
+                pt1 = bbox.Min.Subtract(offset)
+                dim_line_4 = DB.Line.CreateUnbound(pt1, DB.XYZ.BasisZ)
+                dimension_4 = document.Create.NewDimension(document.ActiveView, dim_line_4, ref_array_4)
+                
+        for right in right_instances:
+            bbox = right.get_BoundingBox(document.ActiveView)
+            ref_dict = get_instance_refs(right)
+            orientation = right.FacingOrientation
+            view_direction = document.ActiveView.ViewDirection
+            ref_array_5 = DB.ReferenceArray()
+            if ref_dict.get('Bottom') and ref_dict.get('Top'):
+                ref_1 = ref_dict.get('Bottom')
+                ref_2 = ref_dict.get('Top')
+                ref_array_5.Append(ref_1)
+                ref_array_5.Append(ref_2)
+                offset = DB.XYZ.BasisX.Multiply(OFFSET_VALUE)
+                pt1 = bbox.Max.Add(offset)
+                dim_line_5 = DB.Line.CreateUnbound(pt1, DB.XYZ.BasisZ)
+                dimension_5 = document.Create.NewDimension(document.ActiveView, dim_line_5, ref_array_5)
             
-                # print('same perpendicular')
-
+def is_perpendicular(view_direction, instance_orientation, tolerance=.01):
+    dot_product = view_direction.Normalize().DotProduct(instance_orientation.Normalize())
+    if abs(dot_product) < tolerance:
+        return True
+    else:
+        return False
     
-    # for segment in dimension.Segments:
-    #     if isclose(segment.Value, 0):
-    #         #delete segment
-    #         pass
-
-    # if ref_dict.get('Left') and ref_dict.get('Right'):
-    #     offset = orientation.Multiply(OFFSET_VALUE)
-    #     pt2_direction = DB.XYZ(-orientation.Y, orientation.X, 0)
-    #     # offset = ref_direct.Multiply(OFFSET_VALUE)
-    #     ref_array_1.Append(ref_dict.get('Left'))
-    #     ref_array_1.Append(ref_dict.get('Right'))
-    #     # test = DB.XYZ(orientation.Y, orientation.X, orientation.Z)
-    #     dim_line_1 = DB.Line.CreateUnbound(family_instance.Location.Point.Add(offset), pt2_direction)
-    #     dimension_1 = document.Create.NewDimension(document.ActiveView, dim_line_1, ref_array_1)
-    # if ref_dict.get('Front') and ref_dict.get('Back'):
-    #     OFFSET_VALUE = 2
-    #     offset_direct = DB.XYZ(-orientation.Y, orientation.X, 0)
-    #     offset = offset_direct.Multiply(-OFFSET_VALUE)
-    #     ref_array_2.Append(ref_dict.get('Front'))
-    #     ref_array_2.Append(ref_dict.get('Back'))
-    #     test = DB.XYZ(orientation.Y, orientation.X, orientation.Z)
-    #     dim_line_2 = DB.Line.CreateUnbound(family_instance.Location.Point.Add(offset), orientation)
-    #     dimension_2 = document.Create.NewDimension(document.ActiveView, dim_line_2, ref_array_2)
-
+def is_parallel(view_direction, instance_orientation, tolerance=.01):
+    dot_product = view_direction.Normalize().DotProduct(instance_orientation.Normalize())
+    if abs(dot_product) > 1 - tolerance:
+        return True
+    else:
+        return False
 
 def ask_for_options():
     element_cats = dimension_config.load_configs()
@@ -164,14 +255,15 @@ def ask_for_options():
 
 family_instances = ask_for_options()
 if family_instances:
-    unassigned_instances = list(family_instances)
     instance_blocks = []
-    instance_ids = [instance.Id.ToString() for instance in family_instances]
+    instance_ids = [instance.Id.ToString() for instance in family_instances if instance.SuperComponent is None]
 
     for _id in instance_ids:
         current_instance = revit.doc.GetElement(DB.ElementId(int(_id)))
         bbox = current_instance.get_BoundingBox(revit.doc.ActiveView)
-        outline = DB.Outline(bbox.Min, bbox.Max)
+        new_max_z = bbox.Max.Z + 3
+        new_min_z = bbox.Min.Z - 3
+        outline = DB.Outline(DB.XYZ(bbox.Min.X, bbox.Min.Y, new_min_z), DB.XYZ(bbox.Max.X, bbox.Max.Y, new_max_z))
         tolerance = .1
         bbox_filter = DB.BoundingBoxIntersectsFilter(outline, tolerance, False)
         collector = DB.FilteredElementCollector(revit.doc, revit.doc.ActiveView.Id)
@@ -189,7 +281,7 @@ if family_instances:
 
     with revit.Transaction("Auto Dimension"):
         for block in instance_blocks:
-            # TODO Add top bottom dimensions to far left and right
             family_instances = [revit.doc.GetElement(DB.ElementId(int(_id))) for _id in block]
+            
             if family_instances:
                 create_dimension(revit.doc, family_instances)
