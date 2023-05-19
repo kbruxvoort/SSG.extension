@@ -9,15 +9,16 @@ from parameters import (
     PARAM_MAP,
     has_value,
     get_value,
-    sort_parameter_into_group
+    sort_parameter_into_group,
+    is_built_in
 )
 
-# BAD_EMOJI = ":cross_mark:"
-BAD_EMOJI = "BAD"
-# TACO_EMOJI = ":taco:"
-TACO_EMOJI = "TACO"
-# GOOD_EMOJI = ":white_heavy_check_mark:"
-GOOD_EMOJI = "GOOD"
+BAD_EMOJI = ":cross_mark:"
+# BAD_EMOJI = "BAD"
+TACO_EMOJI = ":taco:"
+# TACO_EMOJI = "TACO"
+GOOD_EMOJI = ":white_heavy_check_mark:"
+# GOOD_EMOJI = "GOOD"
 
 def validate_string(pattern, input_string):
     regex = re.compile(pattern)
@@ -25,6 +26,10 @@ def validate_string(pattern, input_string):
     return bool(match)
 
 def validate_family_name(family_name):
+    pattern = r"^SSG_(([A-Z]|[A-Z][a-z]+|\d+)+_)+[A-Z]{3}"
+    return validate_string(pattern, family_name)
+
+def validate_type_name(family_name):
     pattern = r"^SSG_(([A-Z]|[A-Z][a-z]+|\d+)+_)+[A-Z]{3}"
     return validate_string(pattern, family_name)
 
@@ -41,9 +46,23 @@ def validate_manufacturer_value(parameter_value):
     pattern = r"^Southwest Solutions Group_[A-Z]{3}"
     return validate_string(pattern, parameter_value)
 
+# def create_pattern_from_name(name):
+#     # Replace group of words with a pattern that matches any character or whitespace
+#     pattern = re.sub(r"(\b\w+\b\s*)+", r".+", name)
+#     pattern = re.sub(r"\d+", r"\d+", pattern)
+#     return pattern
+
+def create_pattern_from_name(name):
+    # Match patterns with one or more words separated by hyphens or other potential separators
+    pattern = re.sub(r"([\w\s,]+)(?:\s*[-]\s*([\w\s,]+))+", r"([\w\s,]+(?:\s*[-]\s*[\w\s,]+)*)", name)
+    pattern = re.sub(r"\d+", r"\d+", pattern)
+    # pattern = re.escape(pattern)
+    return pattern
+
+
 
 def score_emoji(score):
-    if score == 1:
+    if score == 1.0:
         return TACO_EMOJI
     if score > .9:
         return GOOD_EMOJI
@@ -52,42 +71,60 @@ def score_emoji(score):
 
 def test_family_name(family_document):
     if validate_family_name(family_document.Title):
-        score = 1
+        score = 1.0
         comments = ""
     else:
-        score = 0
+        score = 0.0
         comments = "{} did not pass name test".format(family_document.Title)
-    return (float(score), comments)
+    return (score, comments)
 
 
 def test_type_name(family_document):
     fam_mgr = family_document.FamilyManager
-    types = [ft for ft in fam_mgr.Types if ft.Name]
+    current_type = fam_mgr.CurrentType
+    types = [ft for ft in fam_mgr.Types if len(ft.Name) > 1]
     comments = ""
-    if not len(types) == 1:
-        score = 1
-        comments = "Multiple types need to be checked manually"
-    else:
+    if len(types) == 0:
+        score = 0.0
+        comments = "Only built-in type found"
+    elif len(types) == 1:
         if types[0].Name == "Default":
-            score = 1
+            score = 1.0
         else:
-            score = 0
+            score = 0.0
             comments = "Single type should be named 'Default' not {}".format(types[0].Name)
+    else:
+        correct_count = 0
+        comment_list = []
+        pattern = create_pattern_from_name(current_type.Name)
+        for ft in types:
+            if validate_string(pattern, ft.Name):
+                correct_count += 1
+            else:
+                comment_list.append("{} did not match pattern: {}".format(ft.Name, pattern))
+        score = get_score(correct_count, len(types))
+        # comments = "Multiple types need to be checked manually"
+        comments = "<br>".join(comment_list)
+
     return (float(score), comments)
 
 
 def test_param_names(family_document):
-    param_names = [p.Definition.Name for p in family_document.FamilyManager.Parameters if p.UserModifiable]
+    param_names = [p.Definition.Name for p in family_document.FamilyManager.Parameters if not is_built_in(p)]
     count = 0
     comment_list = []
-    for pn in param_names:
-        if validate_parameter_name(pn):
-            count += 1
-        else:
-            comment_list.append(pn)
-    score = float(count)/len(param_names)
-    comments = "<br>".join(comment_list)
-    return (float(score), comments)
+    if param_names:
+        for pn in param_names:
+            if validate_parameter_name(pn):
+                count += 1
+            else:
+                comment_list.append(pn)
+        score = get_score(count, len(param_names))
+        comments = "<br>".join(comment_list)
+    else:
+        score = 1.0
+        comments = "Only built-in parameters in family"
+    return (score, comments)
 
 
 def test_nested_names(family_document):
@@ -101,12 +138,12 @@ def test_nested_names(family_document):
                 count += 1
             else:
                 comment_list.append(nn)
-        score = float(count)/len(nested_names)
+        score = get_score(count, len(nested_names))
         comments = "<br>".join(comment_list)
     else:
         score = 1.0
         comments = "No nested families found"
-    return (float(score), comments)
+    return (score, comments)
         
     
 def test_is_reference(family_document):
@@ -117,11 +154,11 @@ def test_is_reference(family_document):
         is_ref_value = rp.get_Parameter(DB.BuiltInParameter.ELEM_REFERENCE_NAME).AsValueString()
         if is_ref_value in ref_list:
             ref_list.remove(is_ref_value)
-    score = float(total - len(ref_list)) / total
+    score = get_score(total - len(ref_list), total)
     if ref_list:
         ref_list.insert(0, "Missing IsReference:")
     comments = "<br>&emsp;".join(ref_list)
-    return (float(score), comments)
+    return (score, comments)
 
 
 def test_weak_reference(family_document):
@@ -137,9 +174,9 @@ def test_weak_reference(family_document):
                 comment_list.append(output.linkify(rp.Id))
     if count > 0:
         comment_list.insert(0, "{} weak references without a name".format(count))
-    score = float(total - count) / total
+    score = get_score(total - count, total)
     comments = "<br>".join(comment_list)
-    return (float(score), comments)
+    return (score, comments)
 
 
 def test_origin_reference(family_document):
@@ -153,27 +190,27 @@ def test_origin_reference(family_document):
             if is_ref_value not in origin_list:
                 count += 1
                 comment_list.append("{}: {} should not define the origin".format(output.linkify(rp.Id), rp.get_Parameter(DB.BuiltInParameter.ELEM_REFERENCE_NAME).AsValueString()))
-    score = float(len(origin_list) - count) / len(origin_list)
+    score = get_score(len(origin_list) - count, len(origin_list))
     comments = "<br>".join(comment_list)
-    return (float(score), comments)
+    return (score, comments)
 
 
 def test_file_size(family_document):
-    score = 1
+    score = 1.0
     comments = ""
     doc_path = family_document.PathName
     if doc_path:
         file_size = os.path.getsize(doc_path)/1024
         comments = "{} KB".format(file_size)
-        if file_size < 1000:
-            score = 1
+        if file_size <= 1000:
+            score = 1.0
         elif file_size > 2000:
-            score = 0
+            score = 0.0
         else:
-            score = 1 - float((file_size - 1000)) / 1000
+            score = score - get_score(float(file_size - 1000), 1000)
     else:
         comments = "Unable to get file size. Save family locally"
-    return (float(score), comments)
+    return (score, comments)
 
 
 def test_file_category(family_document):
@@ -186,18 +223,18 @@ def test_file_category(family_document):
         family_document.Settings.Categories.get_Item(DB.BuiltInCategory.OST_SecurityDevices).Id,
         family_document.Settings.Categories.get_Item(DB.BuiltInCategory.OST_SpecialityEquipment).Id
     ]
-    score = 1
+    score = 1.0
     comments = ""
     category = family_document.OwnerFamily.FamilyCategory
     if category.Id not in approved_categories_ids:
-        score = 0
+        score = 0.0
         comments = "{} is not an approved category".format(category.Name)
-    return (float(score), comments)
+    return (score, comments)
 
 
 def test_plan_geometry(family_document):
     model_elements = DB.FilteredElementCollector(family_document, family_document.ActiveView.Id).OfClass(DB.GenericForm).ToElements()
-    score = 1
+    score = 1.0
     if model_elements:
         count = 0
         comment_list = []
@@ -207,10 +244,10 @@ def test_plan_geometry(family_document):
                 count += 1
                 comment_list.append(output.linkify(m.Id))
         comments = "<br>".join(comment_list)
-        score = float(len(model_elements) - score) / len(model_elements)
+        score = get_score(len(model_elements) - score, len(model_elements))
     else:
         comments = "No geometry in plan."
-    return (float(score), comments)
+    return (score, comments)
 
 def test_plan_lod(family_document):
     model_elements = DB.FilteredElementCollector(family_document, family_document.ActiveView.Id).OfClass(DB.GenericForm).ToElements()
@@ -221,7 +258,7 @@ def test_plan_lod(family_document):
         for m in model_elements:
             visibility = m.GetVisibility()
             if not(visibility.IsShownInCoarse or visibility.IsShownInMedium):
-                score = 1
+                score = 1.0
                 geo_has_detail = True
                 break
     inst_has_detail = False
@@ -233,36 +270,40 @@ def test_plan_lod(family_document):
                 inst_has_detail = True
     
     score = float(int(geo_has_detail or inst_has_detail))
-    if score < 1:
+    if score < 1.0:
         comments = "No changes in detail level found"
     return (score, comments)
             
 
 def test_standard_params(family_document):
     total = len(STANDARD_PARAMETERS)
-    parameters = [p for p in family_document.FamilyManager.Parameters if p.UserModifiable]
+    parameters = [p for p in family_document.FamilyManager.Parameters if not is_built_in(p)]
     for p in parameters:
         if p.Definition.Name in STANDARD_PARAMETERS:
             STANDARD_PARAMETERS.pop(p.Definition.Name)
-    score = float(total - len(STANDARD_PARAMETERS)) / total
+    score = get_score(total - len(STANDARD_PARAMETERS), total)
     comments = "<br>".join(STANDARD_PARAMETERS.keys())
-    return (float(score), comments)
+    return (score, comments)
 
 
 def test_param_group(family_document):
-    parameters = [p for p in family_document.FamilyManager.Parameters if p.UserModifiable]
+    parameters = [p for p in family_document.FamilyManager.Parameters if not is_built_in(p)]
     comment_list = []
     count = 0
-    for p in parameters:
-        original_group = p.Definition.ParameterGroup
-        correct_group = sort_parameter_into_group(p, PARAM_MAP)
-        if original_group == correct_group:
-            count += 1
-        else:
-            comment_list.append("{}: {} should be {}".format(p.Definition.Name, str(original_group), str(correct_group)))
-    score = float(count) / len(parameters)
-    comments = "<br>".join(comment_list)
-    return (float(score), comments)
+    score = 1.0
+    comments = ""
+    if parameters:
+        for p in parameters:
+            original_group = p.Definition.ParameterGroup
+            correct_group = sort_parameter_into_group(p, PARAM_MAP)
+            if original_group == correct_group:
+                count += 1
+            else:
+                comment_list.append("{}: {} should be {}".format(p.Definition.Name, str(original_group), str(correct_group)))
+        score = get_score(count, len(parameters))
+        comments = "<br>".join(comment_list)
+        
+    return (score, comments)
 
 
 def test_param_values(family_document):
@@ -276,7 +317,7 @@ def test_param_values(family_document):
     ]
     comment_list = []
     
-    parameters = [p for p in fam_mgr.Parameters if p.UserModifiable and p.Definition.Name not in other_param_names]
+    parameters = [p for p in fam_mgr.Parameters if not is_built_in(p) and p.Definition.Name not in other_param_names]
     other_parameters = [p for p in fam_mgr.Parameters if p.Definition.Name in other_param_names]
     
     # BuiltIn values
@@ -332,6 +373,12 @@ def run_tests(family_document):
     results.append(total)
     return results
 
+def get_score(numerator, denominator):
+    try:
+        return float(numerator) / float(denominator)
+    except ZeroDivisionError:
+        return 0.0
+    
 def score_average(score_list):
     return float(sum(score_list)) / len(score_list)
 
