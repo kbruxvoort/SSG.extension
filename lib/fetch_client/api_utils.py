@@ -17,7 +17,7 @@ def validate_token(token):
     return TOKEN_REGEX.match(token)
 
 def validate_string(token_string):
-    url = "https://www.ssgbim.com/api/Home/Family/b3d9f8ca-2564-4c1b-b192-3ac22fcdb86d"
+    url = "https://app.fetchbim.com/api/Home/Family/b3d9f8ca-2564-4c1b-b192-3ac22fcdb86d"
     headers = {
         "Authorization": "Bearer {}".format(token_string),
         "Content-Type": "application/json",
