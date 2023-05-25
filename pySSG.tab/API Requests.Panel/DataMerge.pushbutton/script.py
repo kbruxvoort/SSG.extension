@@ -15,9 +15,7 @@ class FamilyOption(forms.TemplateListItem):
     def name(self):
         return self.item["Name"]
     
-# fetch = Client(auth=get_auth())    
-# base_url = "https://www.ssgbim.com/api/"
-# bim_key = os.environ.get('BIM_KEY')
+
 bim_key = get_auth()
 
 if bim_key:
@@ -34,6 +32,8 @@ if bim_key:
         title="Family Search",
         prompt="Input search string to find families"
     )
+    
+    fetch = Client(auth=bim_key)
     if search_text:
 
         params = {
@@ -56,14 +56,27 @@ if bim_key:
                         os.makedirs(new_path)
                     if not isinstance(selection, list):
                         selection = [selection]
-                    fam_ids = [sel.get('Id') for sel in selection]
-                    print(fam_ids)
+
+
                     results = []
-                    for _id in fam_ids:
-                        response = s.get("https://www.ssgbim.com/api/v2/Home/Family/{}".format(_id))
-                        res = response.json().get('BusinessFamilies')
-                        if res:
-                            results.append(res[0])
+                    for sel in selection:
+                        print(sel.get('Name'))
+                        _id = sel.get('Id')
+                        response = fetch.families.retrieve(_id)
+                        if response:
+                            results.append(response)
+                            
+                        table_response = fetch.families.get_table(_id)
+                        if table_response:
+                            file_directory = directory + "\\price_tables"
+                            if not os.path.exists(file_directory):
+                                os.makedirs(file_directory)
+                            filename = "price_table_" + sel.get('Name') + ".csv"
+                            filepath = os.path.join(file_directory, filename)
+                            
+                            with open(filepath, 'wb') as file:
+                                file.write(table_response)
+
                     
                     if results:
                         image_urls = []    

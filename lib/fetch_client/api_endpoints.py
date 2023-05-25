@@ -62,6 +62,13 @@ class FamiliesEndpoint(Endpoint):
         data["FileKey"] = file_key
         
         return self.parent.request(path="/SharedFile/Families", method="POST", data=data)
+    
+    def get_table(self, id, csv=True):
+        if csv is False:
+            path = "Family/{}/PriceTable/JSON".format(id)
+        else:
+            path = "Family/{}/PriceTable/CSV".format(id)
+        return self.parent.request(path=path, method="GET", response_format='content')
 
 
 class FilesEndpoint(Endpoint):

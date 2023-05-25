@@ -23,19 +23,25 @@ class Client(object):
         path = path.lstrip('/')
         return "{}/{}".format(self.base_url.rstrip("/"), path)
     
-    def parse_response(self, response):
+    def parse_response(self, response, response_format='json'):
         try:
             response.raise_for_status()
-            return response.json()
+            if response_format == 'json':
+                return response.json()
+            elif response_format == 'content':
+                return response.content
         except requests.exceptions.ConnectionError as e:
             if self.retries > 0:
                 self.retries -= 1
                 time.sleep(1)
                 return self.request(response.url)
         except requests.exceptions.RequestException as e:
-            raise Exception(e)
+            if response.status_code == 500 and "PriceTable" in response.url:
+                return None
+            else:
+                raise Exception(e)
         
-    def request(self, path=None, method='GET', params=None, data=None, headers=None):
+    def request(self, path=None, method='GET', params=None, data=None, headers=None, response_format='json'):
         """
         Make a request to an endpoint
         """
@@ -62,7 +68,7 @@ class Client(object):
             timeout=self.timeout
         )
 
-        return self.parse_response(response)
+        return self.parse_response(response, response_format)
         
         # # If the request was successful, return the response
         # if response.status_code == requests.codes.ok:
